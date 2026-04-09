@@ -3027,7 +3027,7 @@ function calcCasinoAnalytics(cid){
       const lp=(hkm&&DB.lps[`${cid}|${hkm}`])||DB.lps[`${cid}|${it.item}`]||{};
       const lpDate=lp.lpDate?new Date(lp.lpDate):null;
       const daysDiff=lpDate?Math.floor((now-lpDate)/86400000):null;
-      const entry={...it,cat,lpDate,daysDiff};
+      const entry={...it,cat,lpDate,daysDiff,lpPrice:lp.lpPrice!=null?lp.lpPrice:null};
       if(!lpDate)bucket.notOrdered.push(entry);
       else if(daysDiff<=threshold)bucket.winning.push(entry);
       else bucket.losing.push(entry);
@@ -3247,14 +3247,16 @@ function rAnalyticsDetail(){
     const lpStr=it.lpDate?it.lpDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
     const dayStr=it.daysDiff!==null?`${it.daysDiff}d ago`:'—';
     const dayCol=it.daysDiff===null?'var(--tx3)':it.daysDiff<=threshold?'var(--green)':'var(--red)';
+    const priceStr=it.lpPrice!=null?'$'+parseFloat(it.lpPrice).toFixed(2):'—';
     return`<tr>
-      <td class="s1" style="color:var(--tx3)">${i+1}</td>
+      <td style="color:var(--tx3);font-size:11px">${i+1}</td>
       <td style="font-weight:700;color:var(--navy);font-size:11px">${it.hkm||'<span class="nc">—</span>'}</td>
       <td style="font-size:11px">${it.item}</td>
-      <td class="desc-cell s3" title="${(it.desc||'').replace(/"/g,'&quot;')}" style="font-size:11px">${it.desc||'—'}</td>
+      <td class="desc-cell" title="${(it.desc||'').replace(/"/g,'&quot;')}" style="font-size:11px;max-width:220px">${it.desc||'—'}</td>
       <td style="font-size:11px;color:var(--tx3)">${it.unit||'—'}</td>
       <td style="font-size:10px;color:var(--tx3)">${it.cat||'—'}</td>
       <td style="font-size:11px">${lpStr}</td>
+      <td style="font-size:11px;font-weight:600;color:var(--green2)">${priceStr}</td>
       <td style="font-size:11px;font-weight:600;color:${dayCol}">${dayStr}</td>
     </tr>`;
   }).join('');
@@ -3282,13 +3284,14 @@ ${items.length===0
   ?`<div class="an-empty">No items in this category.</div>`
   :`<div class="tw"><table class="t1">
   <thead><tr>
-    <th class="s1">No.</th>
+    <th>No.</th>
     <th>HKM</th>
     <th>Item #</th>
-    <th class="s3">Description</th>
+    <th>Description</th>
     <th>Unit</th>
     <th>Category</th>
     <th>Last Order Date</th>
+    <th>Purchase Price</th>
     <th>Days Since Order</th>
   </tr></thead>
   <tbody>${rows}</tbody>
@@ -3301,11 +3304,12 @@ function exportAnalyticsDetail(cid,period,segment){
   const items=result[period][segment]||[];
   const casino=result.casino;
   const segLabels={winning:'Winning',losing:'Losing',notOrdered:'Not Ordered'};
-  const rows=[['Casino','Period','Segment','HKM','Item #','Description','Unit','Category','Last Order Date','Days Since Order']];
+  const rows=[['Casino','Period','Segment','HKM','Item #','Description','Unit','Category','Last Order Date','Purchase Price','Days Since Order']];
   items.forEach(it=>{
     const lpStr=it.lpDate?it.lpDate.toLocaleDateString('en-US'):'';
     const dayStr=it.daysDiff!==null?`${it.daysDiff}`:'';
-    rows.push([casino.name,period,segLabels[segment],it.hkm||'',it.item,it.desc||'',it.unit||'',it.cat,lpStr,dayStr]);
+    const priceStr=it.lpPrice!=null?parseFloat(it.lpPrice).toFixed(2):'';
+    rows.push([casino.name,period,segLabels[segment],it.hkm||'',it.item,it.desc||'',it.unit||'',it.cat,lpStr,priceStr,dayStr]);
   });
   const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a');
