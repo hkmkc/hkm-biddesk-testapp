@@ -686,6 +686,10 @@ function updateHash(){
     h='casino/'+S.casino.id;
   }else if(S.view==='upload'){
     h='upload/'+(S.uTab||'qbe');
+  }else if(S.view==='analytics'){
+    h='analytics/'+(S.anCasino||'')+'/'+(S.anPeriod||'');
+  }else if(S.view==='analyticsDetail'){
+    h='analyticsDetail/'+(S.anDrillCid||'')+'/'+(S.anDrillPeriod||'')+'/'+(S.anDrillSegment||'');
   }
   history.replaceState(null,'','#'+h);
 }
@@ -707,6 +711,14 @@ function restoreFromHash(){
     if(c){S.view='casino';S.casino=c;DB._openC[c.id]=true;}
   }else if(p[0]==='upload'&&DB._isAdmin){
     S.view='upload';S.uTab=p[1]||'qbe';
+  }else if(p[0]==='analytics'){
+    S.view='analytics';
+    if(p[1])S.anCasino=p[1];
+    if(p[2])S.anPeriod=p[2];
+  }else if(p[0]==='analyticsDetail'&&p[1]&&p[3]){
+    S.view='analyticsDetail';
+    S.anDrillCid=p[1];S.anDrillPeriod=p[2]||'weekly';S.anDrillSegment=p[3];
+    S.anCasino=p[1]; // keep parent casino selected too
   }
 }
 
