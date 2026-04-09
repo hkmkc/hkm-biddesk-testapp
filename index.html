@@ -170,6 +170,8 @@ input:focus,select:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 
 .pgbtn:disabled{opacity:.35;cursor:default}
 .pgbtn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
 .pgsz{padding:4px 7px;border-radius:5px;border:1px solid var(--bd2);font-size:11px;background:var(--bg2);color:var(--tx);cursor:pointer}
+/* ── Sticky controls bar ── */
+.sticky-ctrl{position:sticky;top:0;z-index:30;background:#fff;padding-bottom:6px;margin-bottom:8px;border-bottom:1px solid var(--bd)}
 /* ── Filter bar ── */
 .fbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:7px 0;margin-bottom:8px}
 .ftag{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;border:1.5px solid var(--bd2);cursor:pointer;font-size:11px;font-weight:600;background:#fff;color:var(--tx2);transition:.12s;white-space:nowrap}
@@ -921,7 +923,7 @@ function rBids(){
       ${dlDrop}
     </div>
   </div>`;
-  return crumb+tabsRow+`<div id="bal" class="al"></div>${(fn[S.bTab]||rDraftBid)()}`;
+  return crumb+`<div class="sticky-ctrl">`+tabsRow+`</div><div id="bal" class="al"></div>${(fn[S.bTab]||rDraftBid)()}`;
 }
 // ── DOWNLOAD ──
 function downloadTab(fmt){
@@ -3175,6 +3177,7 @@ function rAnalytics(){
   const lcStr=lc?new Date(lc).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}):'Never';
   let h=`
 <div class="an-wrap">
+  <div class="sticky-ctrl" style="border-bottom:none;padding-bottom:0;margin-bottom:0">
   <div class="an-hd">
     <div>
       <div class="an-title">📊 Analytics</div>
@@ -3221,6 +3224,7 @@ function rAnalytics(){
       </div>
     </div>`:''}
     <div class="an-last-calc">Last calculated: <b>${lcStr}</b></div>
+  </div>
   </div>
   <div class="an-content">`;
   if(pf==='weekly'||pf==='all'){
@@ -3329,7 +3333,8 @@ function rAnalyticsDetail(){
     </tr>`;
   }).join('');
   return`
-<div style="font-size:12px;color:var(--tx2);margin-bottom:16px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+<div class="sticky-ctrl">
+<div style="font-size:12px;color:var(--tx2);margin-bottom:10px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
   <span style="cursor:pointer;color:var(--tx3)" onclick="nav('analytics')">Analytics</span>
   <span style="color:var(--bd2)">›</span>
   <span style="cursor:pointer;color:var(--tx3)" onclick="S.anCasino='${cid}';nav('analytics')">${casino.name}</span>
@@ -3338,7 +3343,7 @@ function rAnalyticsDetail(){
   <span style="color:var(--bd2)">›</span>
   <span style="color:${segColors[segment]};font-weight:700">${segLabels[segment]}</span>
 </div>
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px">
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:0">
   <div style="display:flex;align-items:center;gap:12px">
     <div style="width:18px;height:18px;border-radius:50%;background:${segColors[segment]};flex-shrink:0"></div>
     <div>
@@ -3349,9 +3354,11 @@ function rAnalyticsDetail(){
   </div>
   <button class="btn" onclick="exportAnalyticsDetail('${cid}','${period}','${segment}')" style="font-size:12px;padding:6px 14px">⬇ Export CSV</button>
 </div>
+</div>
+<div style="margin-bottom:14px"></div>
 ${items.length===0
   ?`<div class="an-empty">No items in this category.</div>`
-  :`<div class="tw"><table class="t1">
+  :`<div class="tw twh"><table class="t1">
   <thead><tr>
     <th>No.</th>
     <th>HKM</th>
