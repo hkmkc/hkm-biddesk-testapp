@@ -37,7 +37,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:var(--tx)
 .sb-item{display:flex;align-items:center;gap:9px;padding:9px 14px;cursor:pointer;transition:.12s;color:rgba(255,255,255,.75);font-size:13px;font-weight:500;border-radius:6px;margin:1px 8px}
 .sb-item:hover{background:rgba(255,255,255,.12);color:#fff}
 .sb-item.on{background:var(--gold);color:#1a2a3a;font-weight:700}
-.sb-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0;opacity:.8}
+.sb-icon{width:18px;text-align:center;flex-shrink:0;opacity:.85;display:flex;align-items:center;justify-content:center}.sb-icon svg{display:block}
 .sb-divider{height:1px;background:rgba(255,255,255,.08);margin:6px 16px}
 .sb-casino-hd{padding:12px 16px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:rgba(255,255,255,.35);display:flex;align-items:center;gap:6px;cursor:pointer;transition:.15s}
 .sb-casino-hd:hover{color:rgba(255,255,255,.7)}
@@ -706,9 +706,12 @@ function rSB(){
   const el=document.getElementById('sb');
   if(!el)return;
   let h='<div class="sb-sec">Navigation</div>';
-  h+=`<div class="sb-item ${S.view==='dashboard'?'on':''}" onclick="nav('dashboard')"><span class="sb-icon">&#9632;</span> Dashboard</div>`;
-  h+=`<div class="sb-item ${S.view==='analytics'?'on':''}" onclick="nav('analytics')"><span class="sb-icon">&#9656;</span> Analytics</div>`;
-  h+=`<div class="sb-item ${S.view==='upload'?'on':''}" onclick="nav('upload')"><span class="sb-icon">&#8679;</span> Upload Hub${!DB._isAdmin?' 🔒':''}</div>`;
+  const _icoDash=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`;
+  const _icoAn=`<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="17" width="4" height="5" rx="2"/><rect x="9" y="9" width="4" height="13" rx="2"/><rect x="16" y="3" width="4" height="19" rx="2"/></svg>`;
+  const _icoUp=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/><path d="M20 18v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2"/></svg>`;
+  h+=`<div class="sb-item ${S.view==='dashboard'?'on':''}" onclick="nav('dashboard')"><span class="sb-icon">${_icoDash}</span> Dashboard</div>`;
+  h+=`<div class="sb-item ${S.view==='analytics'?'on':''}" onclick="nav('analytics')"><span class="sb-icon">${_icoAn}</span> Analytics</div>`;
+  h+=`<div class="sb-item ${S.view==='upload'?'on':''}" onclick="nav('upload')"><span class="sb-icon">${_icoUp}</span> Upload Hub${!DB._isAdmin?' 🔒':''}</div>`;
   h+='<div class="sb-divider"></div>';
   h+='<div class="sb-sec">Casinos</div>';
   const sortedCasinos=[...DB.casinos].sort((a,b)=>a.name.localeCompare(b.name));
