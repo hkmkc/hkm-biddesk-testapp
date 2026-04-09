@@ -79,9 +79,9 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:var(--tx)
 .a-in{background:#e6f1fb;border:1px solid #b5d4f4;color:#0c447c}
 .a-er{background:var(--rl);border:1px solid #f7c1c1;color:var(--red)}
 .tw{overflow-x:auto;border:1px solid var(--bd);border-radius:var(--r);background:var(--bg2)}
-.twh{max-height:540px;overflow-y:auto}
+.twh{/* vertical scroll handled by #main */}
 table{border-collapse:collapse;font-size:12px;width:100%}
-thead th{background:var(--navy);color:#fff;padding:7px 9px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:700;position:sticky;top:0;z-index:2}
+thead th{background:var(--navy);color:#fff;padding:7px 9px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:700;position:sticky;top:var(--total-sticky-h,0px);z-index:2}
 .thp{background:var(--navy3)!important}.thc{background:var(--navy4)!important}
 .thb{background:#1d6a4a!important;color:#a9dfbf!important}.thn{background:#784212!important;color:#fad7a0!important}
 tbody td{padding:6px 9px;border:1px solid var(--bd);white-space:nowrap;vertical-align:middle}
@@ -676,10 +676,14 @@ function render(){
   el.scrollTop=mainScrollY;
   const newTwh=el.querySelector('.twh');
   if(newTwh) newTwh.scrollLeft=twhScrollX;
-  // Set CSS var for sticky stacking: inner .sticky-ctrl sits below .sticky-tabs
+  // Set CSS vars for sticky stacking
   requestAnimationFrame(()=>{
     const st=el.querySelector('.sticky-tabs');
-    document.documentElement.style.setProperty('--sticky-tabs-h', st?(st.offsetHeight+1)+'px':'0px');
+    const stH=st?st.offsetHeight+1:0;
+    document.documentElement.style.setProperty('--sticky-tabs-h', stH+'px');
+    const sc=el.querySelector('.sticky-ctrl');
+    const scH=sc?sc.offsetHeight:0;
+    document.documentElement.style.setProperty('--total-sticky-h', (stH+scH)+'px');
   });
 }
 function nav(v,o={}){Object.assign(S,{view:v},...[o]);updateHash();render();}
@@ -3367,7 +3371,7 @@ function rAnalyticsDetail(){
 <div style="margin-bottom:14px"></div>
 ${items.length===0
   ?`<div class="an-empty">No items in this category.</div>`
-  :`<div class="tw twh"><table class="t1">
+  :`<div class="tw"><table class="t1">
   <thead><tr>
     <th>No.</th>
     <th>HKM</th>
