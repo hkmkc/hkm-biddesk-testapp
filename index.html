@@ -1739,6 +1739,7 @@ function hCasino(inp){
       const removed=prevCount-data.length;
       const cas=DB.casinos.find(c=>c.id===cid);
       sal('ca',`✓ ${cas?.name||cid} › ${cat} updated to ${data.length} items (was ${prevCount}${removed>0?' — '+removed+' items removed':''}). HKM codes preserved. Bid history and QBE data untouched.`,'ok');
+      toast(`<b>${cas?.name||cid} — ${cat}</b> updated.<br>${data.length} items loaded (was ${prevCount})${removed>0?'<br><b>'+removed+' item'+(removed>1?'s':'')+' removed</b> — no longer in casino sheet.':''}<br>HKM codes, bid history &amp; volumes preserved.`,'ok','Casino Sheet Updated 🏨',6000);
       rSB();render();inp.value='';
     },
     function(err){hProg('cs');sal('ca',err,'er',0);inp.value='';}
