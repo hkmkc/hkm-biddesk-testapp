@@ -40,10 +40,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:var(--tx)
 .sb-icon{width:18px;text-align:center;flex-shrink:0;opacity:.85;display:flex;align-items:center;justify-content:center}.sb-icon svg{display:block}
 .sb-divider{height:1px;background:rgba(255,255,255,.08);margin:6px 16px}
 .sb-cat-hd{display:flex;align-items:center;gap:9px;padding:9px 14px;color:rgba(255,255,255,.75);font-size:13px;font-weight:500;border-radius:6px;margin:1px 8px}
-.sb-casino-hd{padding:12px 16px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:rgba(255,255,255,.35);display:flex;align-items:center;gap:6px;cursor:pointer;transition:.15s}
-.sb-casino-hd:hover{color:rgba(255,255,255,.7)}
-.sb-casino-hd .chev{font-size:9px;transition:transform .2s;opacity:.6}
-.sb-casino-hd.open .chev{transform:rotate(90deg)}
+.sb-casino-hd{padding:8px 14px;font-size:12px;font-weight:500;color:rgba(255,255,255,.65);display:flex;align-items:center;justify-content:space-between;gap:6px;cursor:pointer;transition:.12s;border-radius:6px;margin:1px 8px}
+.sb-casino-hd:hover{background:rgba(255,255,255,.1);color:#fff}
+.sb-casino-hd.on{color:#fff;font-weight:600}
+.sb-casino-hd .chev{flex-shrink:0;opacity:.55;transition:transform .2s;display:flex;align-items:center}
+.sb-casino-hd.open .chev{transform:rotate(180deg);opacity:.9}
 .sb-cat{display:flex;align-items:center;justify-content:space-between;padding:7px 14px 7px 30px;cursor:pointer;transition:.12s;color:rgba(255,255,255,.65);font-size:12px;border-radius:5px;margin:1px 8px}
 .sb-cat:hover{background:rgba(255,255,255,.1);color:#fff}
 .sb-cat.on{background:rgba(255,255,255,.18);color:#fff;font-weight:600}
@@ -719,7 +720,9 @@ function rSB(){
   const sortedCasinos=[...DB.casinos].sort((a,b)=>a.name.localeCompare(b.name));
   sortedCasinos.forEach(c=>{
     const open=DB._openC&&DB._openC[c.id];
-    h+=`<div class="sb-casino-hd ${open?'open':''}" onclick="sbToggle('${c.id}')" oncontextmenu="sbCtxCasino(event,'${c.id}')"><span class="chev">&#9658;</span>${c.name}</div>`;
+    const _chevDown=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 12 16 19 9"/></svg>`;
+    const isActiveCasino=S.casino&&S.casino.id===c.id;
+    h+=`<div class="sb-casino-hd ${open?'open':''} ${isActiveCasino?'on':''}" onclick="sbToggle('${c.id}')" oncontextmenu="sbCtxCasino(event,'${c.id}')">${c.name}<span class="chev">${_chevDown}</span></div>`;
     if(open){
       const sortedCats=[...c.cats].sort((a,b)=>a.localeCompare(b));
       // Bid Overview FIRST
