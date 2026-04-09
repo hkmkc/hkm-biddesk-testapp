@@ -659,7 +659,7 @@ function render(){
   const mainScrollY=el.scrollTop;
   const twh=el.querySelector('.twh');
   const twhScrollX=twh?twh.scrollLeft:0;
-  const fn={dashboard:rDash,casino:rCasino,bids:rBids,upload:rUpload,bidoverview:rBidOverview,analytics:rAnalytics};
+  const fn={dashboard:rDash,casino:rCasino,bids:rBids,upload:rUpload,bidoverview:rBidOverview,analytics:rAnalytics,analyticsDetail:rAnalyticsDetail};
   el.innerHTML=(fn[S.view]||rDash)();
   // Restore scroll positions after render
   el.scrollTop=mainScrollY;
@@ -3076,8 +3076,9 @@ function rAnSection(cid,data,period,label,threshold){
     <span class="an-total">${total} total items</span>
   </div>
   <div class="an-body">
-    <div class="an-chart-wrap">
-      <canvas id="chart-${cid}-${period}" width="200" height="200"></canvas>
+    <div class="an-chart-wrap" style="display:flex;flex-direction:column;align-items:center;gap:6px">
+      <canvas id="chart-${cid}-${period}" width="200" height="200" style="cursor:pointer"></canvas>
+      <div style="font-size:10px;color:var(--tx3);text-align:center">👆 Click a segment to view items</div>
     </div>
     <div class="an-stats">
       <div class="an-stat">
@@ -3173,7 +3174,7 @@ function rAnalytics(){
 }
 
 function initAnCharts(cid,result,pf){
-  function makeChart(canvasId,data){
+  function makeChart(canvasId,data,period){
     const canvas=document.getElementById(canvasId);
     if(!canvas||!window.Chart)return;
     const existing=Chart.getChart(canvas);
@@ -3181,6 +3182,7 @@ function initAnCharts(cid,result,pf){
     const{winning,losing,notOrdered}=data;
     const total=winning.length+losing.length+notOrdered.length;
     if(total===0)return;
+    const segMap=['winning','losing','notOrdered'];
     new Chart(canvas,{
       type:'doughnut',
       data:{
@@ -3188,11 +3190,23 @@ function initAnCharts(cid,result,pf){
         datasets:[{
           data:[winning.length,losing.length,notOrdered.length],
           backgroundColor:['#1d9e75','#c0392b','#95a5a6'],
+          hoverBackgroundColor:['#17845d','#a93226','#7f8c8d'],
           borderWidth:3,borderColor:'#fff'
         }]
       },
       options:{
         cutout:'62%',
+        cursor:'pointer',
+        onClick:(evt,elements)=>{
+          if(!elements.length)return;
+          S.anDrillCid=cid;
+          S.anDrillPeriod=period;
+          S.anDrillSegment=segMap[elements[0].index];
+          nav('analyticsDetail');
+        },
+        onHover:(evt,elements)=>{
+          evt.native.target.style.cursor=elements.length?'pointer':'default';
+        },
         plugins:{
           legend:{display:false},
           tooltip:{
@@ -3200,7 +3214,7 @@ function initAnCharts(cid,result,pf){
               label:ctx=>{
                 const val=ctx.raw;
                 const pct=((val/total)*100).toFixed(1);
-                return` ${val} items (${pct}%)`;
+                return` ${val} items (${pct}%) — click to view`;
               }
             }
           }
@@ -3208,8 +3222,97 @@ function initAnCharts(cid,result,pf){
       }
     });
   }
-  if((pf==='weekly'||pf==='all')&&result.weekly)makeChart(`chart-${cid}-weekly`,result.weekly);
-  if((pf==='monthly'||pf==='all')&&result.monthly)makeChart(`chart-${cid}-monthly`,result.monthly);
+  if((pf==='weekly'||pf==='all')&&result.weekly)makeChart(`chart-${cid}-weekly`,result.weekly,'weekly');
+  if((pf==='monthly'||pf==='all')&&result.monthly)makeChart(`chart-${cid}-monthly`,result.monthly,'monthly');
+}
+
+function rAnalyticsDetail(){
+  const cid=S.anDrillCid,period=S.anDrillPeriod,segment=S.anDrillSegment;
+  if(!cid||!period||!segment){nav('analytics');return'';}
+  const result=calcCasinoAnalytics(cid);
+  if(!result){nav('analytics');return'';}
+  const items=result[period][segment]||[];
+  const casino=result.casino;
+  const segLabels={winning:'Winning',losing:'Losing',notOrdered:'Not Ordered'};
+  const segColors={winning:'#1d9e75',losing:'#c0392b',notOrdered:'#95a5a6'};
+  const segIcons={winning:'✅',losing:'🔴',notOrdered:'⚫'};
+  const periodLabel=period==='weekly'?'Weekly':'Monthly';
+  const threshold=period==='weekly'?14:30;
+  // Sort: winning → by days asc, losing → by days desc, notOrdered → by category
+  let sorted=[...items];
+  if(segment==='winning')sorted.sort((a,b)=>(a.daysDiff||0)-(b.daysDiff||0));
+  else if(segment==='losing')sorted.sort((a,b)=>(b.daysDiff||0)-(a.daysDiff||0));
+  else sorted.sort((a,b)=>(a.cat||'').localeCompare(b.cat||''));
+  const rows=sorted.map((it,i)=>{
+    const lpStr=it.lpDate?it.lpDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
+    const dayStr=it.daysDiff!==null?`${it.daysDiff}d ago`:'—';
+    const dayCol=it.daysDiff===null?'var(--tx3)':it.daysDiff<=threshold?'var(--green)':'var(--red)';
+    return`<tr>
+      <td class="s1" style="color:var(--tx3)">${i+1}</td>
+      <td style="font-weight:700;color:var(--navy);font-size:11px">${it.hkm||'<span class="nc">—</span>'}</td>
+      <td style="font-size:11px">${it.item}</td>
+      <td class="desc-cell s3" title="${(it.desc||'').replace(/"/g,'&quot;')}" style="font-size:11px">${it.desc||'—'}</td>
+      <td style="font-size:11px;color:var(--tx3)">${it.unit||'—'}</td>
+      <td style="font-size:10px;color:var(--tx3)">${it.cat||'—'}</td>
+      <td style="font-size:11px">${lpStr}</td>
+      <td style="font-size:11px;font-weight:600;color:${dayCol}">${dayStr}</td>
+    </tr>`;
+  }).join('');
+  return`
+<div style="font-size:12px;color:var(--tx2);margin-bottom:16px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+  <span style="cursor:pointer;color:var(--tx3)" onclick="nav('analytics')">Analytics</span>
+  <span style="color:var(--bd2)">›</span>
+  <span style="cursor:pointer;color:var(--tx3)" onclick="S.anCasino='${cid}';nav('analytics')">${casino.name}</span>
+  <span style="color:var(--bd2)">›</span>
+  <span style="cursor:pointer;color:var(--tx3)" onclick="S.anCasino='${cid}';S.anPeriod='${period}';nav('analytics')">${periodLabel}</span>
+  <span style="color:var(--bd2)">›</span>
+  <span style="color:${segColors[segment]};font-weight:700">${segLabels[segment]}</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div style="width:18px;height:18px;border-radius:50%;background:${segColors[segment]};flex-shrink:0"></div>
+    <div>
+      <div style="font-size:20px;font-weight:800;color:var(--navy)">${segIcons[segment]} ${segLabels[segment]} Items</div>
+      <div style="font-size:12px;color:var(--tx3)">${casino.name} · ${periodLabel} · ${threshold}-day window · <b>${items.length} items</b></div>
+    </div>
+  </div>
+  <button class="btn" onclick="exportAnalyticsDetail('${cid}','${period}','${segment}')" style="font-size:12px;padding:6px 14px">⬇ Export CSV</button>
+</div>
+${items.length===0
+  ?`<div class="an-empty">No items in this category.</div>`
+  :`<div class="tw"><table class="t1">
+  <thead><tr>
+    <th class="s1">No.</th>
+    <th>HKM</th>
+    <th>Item #</th>
+    <th class="s3">Description</th>
+    <th>Unit</th>
+    <th>Category</th>
+    <th>Last Order Date</th>
+    <th>Days Since Order</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table></div>`}`;
+}
+
+function exportAnalyticsDetail(cid,period,segment){
+  const result=calcCasinoAnalytics(cid);
+  if(!result)return;
+  const items=result[period][segment]||[];
+  const casino=result.casino;
+  const segLabels={winning:'Winning',losing:'Losing',notOrdered:'Not Ordered'};
+  const rows=[['Casino','Period','Segment','HKM','Item #','Description','Unit','Category','Last Order Date','Days Since Order']];
+  items.forEach(it=>{
+    const lpStr=it.lpDate?it.lpDate.toLocaleDateString('en-US'):'';
+    const dayStr=it.daysDiff!==null?`${it.daysDiff}`:'';
+    rows.push([casino.name,period,segLabels[segment],it.hkm||'',it.item,it.desc||'',it.unit||'',it.cat,lpStr,dayStr]);
+  });
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download=`analytics_${casino.id}_${period}_${segment}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  toast('Item list exported to CSV.','ok','Export Complete ⬇',4000);
 }
 
 function recalcAnalytics(){
