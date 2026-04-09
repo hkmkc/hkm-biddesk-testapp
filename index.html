@@ -714,7 +714,7 @@ function rSB(){
   h+=`<div class="sb-item ${S.view==='analytics'?'on':''}" onclick="nav('analytics')"><span class="sb-icon">${_icoAn}</span> Analytics</div>`;
   h+=`<div class="sb-item ${S.view==='upload'?'on':''}" onclick="nav('upload')"><span class="sb-icon">${_icoUp}</span> Upload Hub${!DB._isAdmin?' 🔒':''}</div>`;
   h+='<div class="sb-divider"></div>';
-  const _icoCasinos=`<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="3.5"/><path d="M7.5 11.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 4.5 4.5V14h-9v-2.5z"/><path d="M2 19.5C2.8 17 5 15.5 7.5 15.5h9c2.5 0 4.7 1.5 5.5 4 .3.8-.5 2.5-1.8 2.5H3.8C2.5 22 1.7 20.3 2 19.5z"/></svg>`;
+  const _icoCasinos=`<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><defs><polygon id="hkm5star" points="0,-2 0.5,-0.688 1.902,-0.618 0.808,0.263 1.176,1.618 0,0.85 -1.176,1.618 -0.808,0.263 -1.902,-0.618 -0.5,-0.688"/></defs><use href="#hkm5star" transform="translate(2.5,3)"/><use href="#hkm5star" transform="translate(7,3)"/><use href="#hkm5star" transform="translate(11.5,3)"/><use href="#hkm5star" transform="translate(16.5,3)"/><use href="#hkm5star" transform="translate(21.5,3)"/><path fill-rule="evenodd" d="M1,7 H23 V23 H1 Z M4,10 H8.5 V14.5 H4 Z M10,10 H14 V14.5 H10 Z M15.5,10 H20 V14.5 H15.5 Z M9.5,17.5 H14.5 V23 H9.5 Z"/></svg>`;
   h+=`<div class="sb-cat-hd"><span class="sb-icon">${_icoCasinos}</span> Casinos</div>`;
   const sortedCasinos=[...DB.casinos].sort((a,b)=>a.name.localeCompare(b.name));
   sortedCasinos.forEach(c=>{
