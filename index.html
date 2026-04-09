@@ -39,6 +39,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:var(--tx)
 .sb-item.on{background:var(--gold);color:#1a2a3a;font-weight:700}
 .sb-icon{width:18px;text-align:center;flex-shrink:0;opacity:.85;display:flex;align-items:center;justify-content:center}.sb-icon svg{display:block}
 .sb-divider{height:1px;background:rgba(255,255,255,.08);margin:6px 16px}
+.sb-cat-hd{display:flex;align-items:center;gap:9px;padding:9px 14px;color:rgba(255,255,255,.75);font-size:13px;font-weight:500;border-radius:6px;margin:1px 8px}
 .sb-casino-hd{padding:12px 16px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:rgba(255,255,255,.35);display:flex;align-items:center;gap:6px;cursor:pointer;transition:.15s}
 .sb-casino-hd:hover{color:rgba(255,255,255,.7)}
 .sb-casino-hd .chev{font-size:9px;transition:transform .2s;opacity:.6}
@@ -713,7 +714,8 @@ function rSB(){
   h+=`<div class="sb-item ${S.view==='analytics'?'on':''}" onclick="nav('analytics')"><span class="sb-icon">${_icoAn}</span> Analytics</div>`;
   h+=`<div class="sb-item ${S.view==='upload'?'on':''}" onclick="nav('upload')"><span class="sb-icon">${_icoUp}</span> Upload Hub${!DB._isAdmin?' 🔒':''}</div>`;
   h+='<div class="sb-divider"></div>';
-  h+='<div class="sb-sec">Casinos</div>';
+  const _icoCasinos=`<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="3.5"/><path d="M7.5 11.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 4.5 4.5V14h-9v-2.5z"/><path d="M2 19.5C2.8 17 5 15.5 7.5 15.5h9c2.5 0 4.7 1.5 5.5 4 .3.8-.5 2.5-1.8 2.5H3.8C2.5 22 1.7 20.3 2 19.5z"/></svg>`;
+  h+=`<div class="sb-cat-hd"><span class="sb-icon">${_icoCasinos}</span> Casinos</div>`;
   const sortedCasinos=[...DB.casinos].sort((a,b)=>a.name.localeCompare(b.name));
   sortedCasinos.forEach(c=>{
     const open=DB._openC&&DB._openC[c.id];
