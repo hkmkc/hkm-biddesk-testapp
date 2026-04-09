@@ -352,6 +352,12 @@ tr:hover .del-row{opacity:1}
 .an-insight{background:var(--bg3);border-left:4px solid var(--navy);border-radius:0 8px 8px 0;padding:11px 15px;font-size:12px;color:var(--tx2);margin-top:18px;line-height:1.7}
 .an-empty{color:var(--tx3);font-size:13px;padding:24px;text-align:center;background:var(--bg3);border-radius:var(--r);border:1px dashed var(--bd)}
 .an-last-calc{font-size:11px;color:var(--tx3);align-self:flex-end;padding-bottom:4px}
+/* Analytics export dropdown */
+.an-exp-wrap{position:relative;display:inline-block}
+.an-exp-dd{position:absolute;top:calc(100% + 5px);right:0;background:#fff;border:1.5px solid #93c5fd;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.13);z-index:9999;min-width:150px;overflow:hidden;animation:toastIn .15s ease}
+.an-exp-dd-item{display:flex;align-items:center;gap:9px;padding:9px 15px;font-size:12px;font-weight:600;color:#1B5C9E;cursor:pointer;transition:.12s;white-space:nowrap}
+.an-exp-dd-item:hover{background:#eff6ff}
+.an-exp-dd-item+.an-exp-dd-item{border-top:1px solid #e0eeff}
 
 /* ── Toast Notifications ── */
 #toast-stack{position:fixed;top:68px;right:22px;z-index:99999;display:flex;flex-direction:column;gap:10px;pointer-events:none;max-width:420px}
@@ -3163,8 +3169,30 @@ function rAnalytics(){
       <div class="an-sub">Bid performance by casino — based on QBE purchase history upload dates</div>
     </div>
     <div class="an-hd-actions">
-      <button class="btn" onclick="exportAnalytics('${filterCid}')" style="font-size:12px;padding:6px 14px">⬇ Export CSV</button>
-      <button class="btn btn-primary" onclick="recalcAnalytics()" style="font-size:12px;padding:6px 14px">↻ Recalculate</button>
+      <div class="an-exp-wrap">
+        <button class="btn-act" onclick="toggleAnExpDd(event,'${filterCid}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:3px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          EXPORT ▾
+        </button>
+        <div id="an-exp-dd" class="an-exp-dd" style="display:none">
+          <div class="an-exp-dd-item" onclick="exportAnalytics('${filterCid}','csv')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Export as CSV
+          </div>
+          <div class="an-exp-dd-item" onclick="exportAnalytics('${filterCid}','xlsx')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+            Export as Excel
+          </div>
+          <div class="an-exp-dd-item" onclick="exportAnalytics('${filterCid}','pdf')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Export as PDF
+          </div>
+        </div>
+      </div>
+      <button class="btn-act btn-act-gold" onclick="recalcAnalytics()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:3px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        RECALCULATE
+      </button>
     </div>
   </div>
   <div class="an-controls">
@@ -3372,18 +3400,33 @@ function recalcAnalytics(){
   render();
 }
 
-function exportAnalytics(cid){
+function toggleAnExpDd(evt,cid){
+  evt.stopPropagation();
+  const dd=document.getElementById('an-exp-dd');
+  if(!dd)return;
+  const isOpen=dd.style.display==='block';
+  dd.style.display=isOpen?'none':'block';
+  if(!isOpen){
+    const close=e=>{if(!dd.contains(e.target)){dd.style.display='none';document.removeEventListener('click',close);}};
+    setTimeout(()=>document.addEventListener('click',close),10);
+  }
+}
+
+function exportAnalytics(cid,fmt='csv'){
+  const dd=document.getElementById('an-exp-dd');
+  if(dd)dd.style.display='none';
   const result=calcCasinoAnalytics(cid);
   if(!result){toast('No analytics data to export.','er','Export Failed');return;}
   const casino=result.casino;
   const now=new Date().toLocaleDateString('en-US');
-  const rows=[['Casino','Period','Winning Items','Losing Items','Not Ordered (Has HKM)','Not Bidding (No HKM)','Bid Items Total','All Items Total','Win %','Loss %','Not Ordered %','Not Bidding %','Date Generated']];
+  const headers=['Casino','Period','Winning Items','Losing Items','Not Ordered (Has HKM)','Not Bidding (No HKM)','Bid Items Total','All Items Total','Win %','Loss %','Not Ordered %','Not Bidding %','Date Generated'];
+  const dataRows=[];
   ['weekly','monthly'].forEach(period=>{
     const data=result[period];
     const bidTotal=data.winning.length+data.losing.length+data.notOrdered.length;
     const total=bidTotal+data.notBidding.length;
     if(total===0)return;
-    rows.push([
+    dataRows.push([
       casino.name,
       period.charAt(0).toUpperCase()+period.slice(1),
       data.winning.length,data.losing.length,data.notOrdered.length,data.notBidding.length,bidTotal,total,
@@ -3394,12 +3437,34 @@ function exportAnalytics(cid){
       now
     ]);
   });
-  const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
-  const a=document.createElement('a');
-  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
-  a.download=`analytics_${casino.id}_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  toast('Analytics exported successfully.','ok','Export Complete ⬇',4000);
+  const rows=[headers,...dataRows];
+  const dateStr=new Date().toISOString().slice(0,10);
+  const fname=`analytics_${casino.id}_${dateStr}`;
+  if(fmt==='xlsx'){
+    if(!window.XLSX){toast('Excel library not loaded.','er','Export Failed');return;}
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=headers.map(()=>({wch:18}));
+    XLSX.utils.book_append_sheet(wb,ws,'Analytics Summary');
+    XLSX.writeFile(wb,fname+'.xlsx');
+    toast('Analytics exported as Excel.','ok','Export Complete ⬇',4000);
+  } else if(fmt==='pdf'){
+    const pRows=dataRows.map(r=>`<tr>${r.map((v,i)=>`<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px${i>=8&&i<=11?';font-weight:700':''}${i===8?';color:#1d9e75':i===9?';color:#c0392b':''}">${v}</td>`).join('')}</tr>`).join('');
+    const html=`<!DOCTYPE html><html><head><title>Analytics — ${casino.name}</title>
+    <style>body{font-family:Segoe UI,sans-serif;margin:30px;color:#111}h1{font-size:20px;color:#1B5C9E;margin-bottom:4px}p{font-size:12px;color:#666;margin-bottom:18px}table{border-collapse:collapse;width:100%}th{background:#1B5C9E;color:#fff;padding:8px 10px;font-size:12px;text-align:left}tr:nth-child(even){background:#f4f8fc}@media print{body{margin:15px}}</style></head>
+    <body><h1>📊 Analytics Report — ${casino.name}</h1><p>Generated: ${now}</p>
+    <table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${pRows}</tbody></table>
+    <script>window.onload=()=>{window.print();}<\/script></body></html>`;
+    const w=window.open('','_blank','width=900,height=600');
+    w.document.write(html);w.document.close();
+    toast('PDF print dialog opened.','ok','Export as PDF',4000);
+  } else {
+    const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const a=document.createElement('a');
+    a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+    a.download=fname+'.csv';a.click();
+    toast('Analytics exported as CSV.','ok','Export Complete ⬇',4000);
+  }
 }
 
 // ── END ANALYTICS ──────────────────────────────────────────────
