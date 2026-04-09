@@ -995,11 +995,10 @@ ${(!DB.periods||!DB.periods.some(p=>Object.keys(p.data||{}).length>0))?`<div cla
   <th style="width:50px;min-width:50px">UM</th>
   <th style="min-width:78px">LP Date</th>
   <th style="min-width:68px">LP Price</th>
-  <th style="min-width:50px">Vol 90D</th>
-  <th style="min-width:46px">365D</th>
-  <th style="min-width:46px">90D</th>
-  <th style="min-width:46px">30D</th>
-  <th style="min-width:46px">7D</th>
+  <th style="min-width:46px">Vol 365D</th>
+  <th style="min-width:46px">Vol 90D</th>
+  <th style="min-width:46px">Vol 30D</th>
+  <th style="min-width:46px">Vol 7D</th>
   <th style="min-width:82px">365D Rev</th>
   <th class="thp" style="min-width:68px">B Cost<br><span style="font-size:9px;font-weight:400">${pb.lbl}</span></th>
   <th class="thp" style="min-width:68px">B Reg Price</th>
@@ -1029,7 +1028,7 @@ ${(()=>{
   const lb=getLastBid(S.casino.id,S.cat,it.item);
   const nk=`${S.casino.id}|${S.cat}|${it.item}`;
   const nv=DB.newB[nk]?parseFloat(DB.newB[nk]):null;
-  const ref=lps.vol90||0;
+  const ref=lps.v90||0;
   return`<tr>
     <td class="rn">${_drn}</td>
     <td class="s1" style="font-size:11px;color:#0c447c;font-weight:700">${it.hkm||'<span class="nc">—</span>'}</td>
@@ -1038,7 +1037,6 @@ ${(()=>{
     <td style="font-size:11px;color:var(--tx2)">${it.unit}</td>
     <td>${ldH(lps.lpDate)}</td>
     <td class="pr">${lps.lpPrice!=null?'$'+f(lps.lpPrice):'<span class="nc">—</span>'}</td>
-    <td class="nr">${vH(lps.vol90,ref)}</td>
     <td class="nr">${vH(lps.v365,ref)}</td>
     <td class="nr">${vH(lps.v90,ref)}</td>
     <td class="nr">${vH(lps.v30,ref)}</td>
@@ -1444,7 +1442,9 @@ function hQBE(inp){
         const colAmount=fndHdr('amount','total','lineamount','extamount')||'Amount';
         const parsed=res.data.map(r=>{
           const rawItem=String(r[colItem]||r['Item']||r['item']||r['ITEM']||'').trim();
-          const code=rawItem.split(/[\s,]+/)[0].trim();
+          // QB exports items as "GWCSH2:Wine Shao Xing..." — split on whitespace, comma, or colon
+          // then take the first segment as the HKM code
+          const code=rawItem.split(/[\s,:]+/)[0].trim();
           const rawDate=r[colDate]||r['Date']||r['date']||'';
           let dt;
           if(typeof rawDate==='number'&&rawDate>1000&&rawDate<100000){
@@ -1472,10 +1472,11 @@ function hQBE(inp){
         let n=0;
         Object.entries(grp).forEach(([code,rows])=>{
           const latest=rows.sort((a,b)=>b.dt-a.dt||b.num-a.num)[0];
+          // Store keyed by HKM code (QB exports HKM codes, not Item #s)
+          // gL() in the render layer looks up by HKM code first, so this matches correctly
           DB.lps[`${cid}|${code}`]={
             lpDate:latest.dt.toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'2-digit'}),
             lpPrice:latest.price,
-            vol90:rows.filter(r=>r.dt>=d90).length,
             v365:rows.filter(r=>r.dt>=d365).length,
             v90:rows.filter(r=>r.dt>=d90).length,
             v30:rows.filter(r=>r.dt>=d30).length,
