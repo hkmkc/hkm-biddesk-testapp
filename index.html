@@ -1404,24 +1404,25 @@ function rUCasino(){return`
 <div class="upp">
   <div class="upi">🏨</div>
   <div class="upt">Casino Item Sheet Update</div>
-  <div class="upd">When a casino sends an updated bid template (QuoteSheetSupplierPricingEmail), upload it here per casino and category. The item list syncs to match — new items are added, discontinued items are removed, and the exact casino order is preserved.</div>
+  <div class="upd">When a casino sends an updated bid template, upload it here per casino and category. The item list syncs to match — new items are added, discontinued items are removed, and the exact casino order is preserved.</div>
   <div class="ups">
-    <b>What changes:</b><br>
+    <b>What changes on upload:</b><br>
     &nbsp;• ✅ New items from casino → added to your list<br>
     &nbsp;• ❌ Items removed by casino → removed from your list<br>
     &nbsp;• 🔄 Item order → updated to match casino sheet exactly<br><br>
     <b>What is always preserved:</b><br>
     &nbsp;• Your HKM codes (never overwritten by casino sheet)<br>
-    &nbsp;• All bid price history (bidH)<br>
+    &nbsp;• All bid price history<br>
     &nbsp;• QBE volumes &amp; LP Date / LP Price data<br><br>
-    <b>Column reading (auto-detected, falls back to positional):</b><br>
-    &nbsp;• Item # → Col 2 (or header: Item No / Item Code / Item #)<br>
-    &nbsp;• Description → Col 3 (or header: Description / Product Name)<br>
-    &nbsp;• Unit → Col 7 (or header: Unit / UM / UOM)<br><br>
+    <b>Column reading — matched by label, not position:</b><br>
+    &nbsp;• Looks for headers: <b>Item #, Item No, Item Code</b> → Item reference<br>
+    &nbsp;• Looks for headers: <b>Description, Product Name</b> → Description<br>
+    &nbsp;• Looks for headers: <b>Unit, UM, UOM, Pack</b> → Unit of measure<br>
+    &nbsp;• Column positions can vary per casino — labels are what matter<br><br>
     <b style="color:var(--red)">Always ignored from casino sheet:</b><br>
-    &nbsp;• Col 5 → Casino's 90D Volume (we use our own QBE data)<br>
-    &nbsp;• Col 8 → Casino's Previous Bid (we use our own bid history)<br>
-    &nbsp;• Col 9 → Bid Price column (we fill this, not the casino)
+    &nbsp;• Casino's Previous Bid column (we use our own bid history)<br>
+    &nbsp;• Bid Price column (we fill and submit this ourselves)<br>
+    &nbsp;• <span style="color:var(--red)">RWLV only:</span> 90D Volume column (we use our own QBE data instead)
   </div>
   <div style="margin-bottom:10px;display:flex;gap:10px">
     <div style="flex:1"><label class="fl">Casino</label>
@@ -1442,22 +1443,18 @@ function rUCasino(){return`
 </div>
 <div class="upp" style="background:var(--bg3);border-style:dashed">
   <div style="font-size:22px;margin-bottom:8px">📋</div>
-  <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">Casino sheet column map</div>
+  <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">What we read vs. ignore</div>
   <div style="font-size:12px;color:var(--tx2);line-height:2.1">
-    Col 0 → Property<br>
-    Col 1 → Bid Name<br>
-    <b style="color:var(--navy)">Col 2 → Item # ← we read</b><br>
-    <b style="color:var(--navy)">Col 3 → Description ← we read</b><br>
-    Col 4 → Pack Size<br>
-    <span style="color:var(--red)">Col 5 → Casino 90D Vol ← IGNORED (we use QBE)</span><br>
-    Col 6 → Tiers<br>
-    <b style="color:var(--navy)">Col 7 → Unit ← we read</b><br>
-    <span style="color:var(--red)">Col 8 → Casino Prev Bid ← IGNORED (we use our history)</span><br>
-    <b style="color:var(--green)">Col 9 → Bid Price ← WE FILL &amp; SUBMIT THIS</b>
+    <b style="color:var(--navy)">Item # / Item No / Item Code ← we read</b><br>
+    <b style="color:var(--navy)">Description / Product Name ← we read</b><br>
+    <b style="color:var(--navy)">Unit / UM / UOM / Pack ← we read</b><br>
+    <span style="color:var(--red)">Previous Bid / Last Bid ← IGNORED</span><br>
+    <span style="color:var(--red)">Bid Price column ← IGNORED (we fill this)</span><br>
+    <span style="color:var(--red)">90D Volume ← IGNORED for RWLV only</span><br>
   </div>
-  <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bd);font-size:11px;color:var(--tx3);line-height:1.7">
-    💡 <b>HKM codes</b> are your internal reference — they are never in the casino sheet.<br>
-    You assign them manually in the item list and they survive every casino sheet upload.
+  <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bd);font-size:11px;color:var(--tx3);line-height:1.8">
+    💡 <b>Column positions vary per casino</b> — the app reads by label, not by fixed column number.<br><br>
+    💡 <b>HKM codes</b> are your internal reference — never in the casino sheet. They are assigned by you and survive every upload.
   </div>
 </div>
 </div>`;}
