@@ -319,6 +319,23 @@ tr:hover .del-row{opacity:1}
 
 /* ── Description cell ── */
 .desc-cell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default}
+
+/* ── Toast Notifications ── */
+#toast-stack{position:fixed;top:68px;right:22px;z-index:99999;display:flex;flex-direction:column;gap:10px;pointer-events:none;max-width:420px}
+.toast{width:100%;padding:16px 20px 16px 16px;border-radius:14px;box-shadow:0 8px 36px rgba(0,0,0,.25),0 2px 8px rgba(0,0,0,.12);display:flex;align-items:flex-start;gap:13px;pointer-events:all;animation:toastIn .3s cubic-bezier(.34,1.56,.64,1) forwards;position:relative;cursor:pointer;border-left:5px solid transparent}
+.toast.t-ok{background:#1a8a62;color:#fff;border-left-color:#0f6344}
+.toast.t-er{background:#c0392b;color:#fff;border-left-color:#8e1c10}
+.toast.t-wn{background:#e6a817;color:#1a2a3a;border-left-color:#b07e00}
+.toast.t-in{background:#1B5C9E;color:#fff;border-left-color:#0f4a82}
+.toast-icon{font-size:26px;line-height:1;flex-shrink:0;margin-top:1px}
+.toast-body{flex:1;min-width:0}
+.toast-title{font-size:13px;font-weight:800;letter-spacing:.4px;margin-bottom:3px;text-transform:uppercase}
+.toast-msg{font-size:12px;font-weight:500;opacity:.93;line-height:1.45;word-break:break-word}
+.toast-close{position:absolute;top:10px;right:12px;opacity:.7;font-size:18px;line-height:1;padding:2px 4px;border-radius:4px;transition:.12s}
+.toast-close:hover{opacity:1;background:rgba(255,255,255,.2)}
+@keyframes toastIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes toastOut{from{transform:translateX(0);opacity:1}to{transform:translateX(110%);opacity:0}}
+.toast.leaving{animation:toastOut .25s ease forwards}
 </style>
 </head>
 <body>
@@ -559,6 +576,35 @@ const sal=(id,msg,t='ok',ms=4000)=>{
   el.textContent=msg;el.className=`al a-${t} show`;
   if(ms>0)setTimeout(()=>el.classList.remove('show'),ms);
 };
+
+// ── Toast popup notifications ──────────────────────────────
+function toast(msg, type='ok', title='', duration=4500){
+  const icons={ok:'✅',er:'❌',wn:'⚠️',in:'ℹ️'};
+  const titles={ok:'Success',er:'Error',wn:'Warning',in:'Info'};
+  let stack=document.getElementById('toast-stack');
+  if(!stack){
+    stack=document.createElement('div');
+    stack.id='toast-stack';
+    document.body.appendChild(stack);
+  }
+  const el=document.createElement('div');
+  el.className=`toast t-${type}`;
+  el.innerHTML=`
+    <span class="toast-icon">${icons[type]||'✅'}</span>
+    <div class="toast-body">
+      <div class="toast-title">${title||(titles[type]||'Notice')}</div>
+      <div class="toast-msg">${msg}</div>
+    </div>
+    <span class="toast-close">✕</span>`;
+  const dismiss=()=>{
+    el.classList.add('leaving');
+    setTimeout(()=>{if(el.parentNode)el.parentNode.removeChild(el);},260);
+  };
+  el.querySelector('.toast-close').onclick=e=>{e.stopPropagation();dismiss();};
+  el.onclick=dismiss;
+  stack.appendChild(el);
+  if(duration>0) setTimeout(()=>{if(el.isConnected)dismiss();},duration);
+}
 const sProg=(px)=>{
   const pb=document.getElementById(px+'-pb'),pf=document.getElementById(px+'-pf');
   if(!pb)return;pb.style.display='block';pf.style.width='0%';
@@ -962,12 +1008,12 @@ ${(!DB.periods||!DB.periods.some(p=>Object.keys(p.data||{}).length>0))?`<div cla
 <div class="psb">
   <div class="psg psa">
     <label class="fl"><span class="bdg bc2">PERIOD A — CURRENT</span></label>
-    <select class="pss" onchange="S.cA=parseInt(this.value);render()">${po_a}</select>
+    <select class="pss" onchange="S.cA=parseInt(this.value);render();toast('Period A updated to: <b>'+this.options[this.selectedIndex].text+'</b><br>Cost &amp; margin columns now reflect this period.','in','Period A Changed');">${po_a}</select>
   </div>
   <div class="vs">vs</div>
   <div class="psg psb2">
     <label class="fl"><span class="bdg bp">PERIOD B — COMPARE TO</span></label>
-    <select class="pss" onchange="S.cB=parseInt(this.value);render()">${po_b}</select>
+    <select class="pss" onchange="S.cB=parseInt(this.value);render();toast('Period B updated to: <b>'+this.options[this.selectedIndex].text+'</b><br>Comparison column now reflects this period.','in','Period B Changed');">${po_b}</select>
   </div>
   <div style="margin-left:auto;font-size:11px;color:var(--tx2);align-self:center;line-height:1.7">
     Margin = (Price − Cost) ÷ Price<br>
@@ -1489,6 +1535,7 @@ function hQBE(inp){
           sal('qa',`⚠ No items matched. Detected headers: ${hdrs.slice(0,8).join(', ')}. Expected columns: Date, Item (or Item Code), Sales Price, Amount.`,'wn',0);
         } else {
           sal('qa',`✓ ${n} items updated — LP Date, LP Price, 365/90/30/7D volumes, and 365D revenue now reflect your QBE data.`,'ok');
+          toast(`${n} items updated from QBE Purchase History.<br>LP Date, LP Price, and all order volumes (Vol 365D / 90D / 30D / 7D) are now current.`,'ok','Upload Successful 📂',6000);
           render();
         }
       }catch(e){hProg('qbe');sal('qa','Error: '+e.message,'er',0);}
@@ -1570,6 +1617,7 @@ function hPL(inp){
         if(SB&&_sbReady) await sbSync();
         hProg('pl');
         sal('pa',`✓ "${bidType} ${lbl}" added — ${itemCount} items loaded. Previous periods shifted back. Draft Bid comparison updated.`,'ok');
+        toast(`<b>${bidType} ${lbl}</b> loaded with ${itemCount} items.<br>Period A / Period B dropdowns and Draft Bid comparison are now updated.`,'ok','Price List Uploaded 📂',6000);
         document.getElementById('pll').value='';
         document.getElementById('plbt').value='';
         inp.value='';
@@ -1708,6 +1756,7 @@ function copyBid(){
   });
   navigator.clipboard.writeText(lines.join('\n')).catch(()=>{});
   sal('bal','✓ Bid prices copied to clipboard — paste directly into the casino template (Col 9 / Bid Price)','ok');
+  toast('Bid prices copied to clipboard!<br>Paste into Col 9 (Bid Price) of the casino sheet.','ok','Copied to Clipboard 📋');
 }
 
 function saveBid(){
@@ -1730,7 +1779,7 @@ function saveBid(){
     const nk=`${S.casino.id}|${S.cat}|${it.item}`,nb=DB.newB[nk];
     if(nb&&nb!==''){bids[it.item]=parseFloat(nb);n++;}
   });
-  if(n===0){sal('bal','No new bid prices to save. Enter prices in the New Bid ★ column first.','er',0);return;}
+  if(n===0){sal('bal','No new bid prices to save. Enter prices in the New Bid ★ column first.','er',0);toast('No bid prices found. Enter prices in the New Bid ★ column first.','er','Cannot Submit');return;}
   DB.savedBids[key]=DB.savedBids[key].filter(p=>p.lbl!==lbl);
   DB.savedBids[key].unshift({id:'sb'+Date.now(),lbl,dt:fromEl.value,bids});
   if(DB.savedBids[key].length>30) DB.savedBids[key]=DB.savedBids[key].slice(0,30);
@@ -1740,15 +1789,17 @@ function saveBid(){
   addNotif(`📋 New pricing submitted: ${casinoName} — ${S.cat}. Effective ${lbl}.`,'green');
   dbSave();
   sal('bal',`✓ ${n} bid prices saved — effective ${lbl}`,'ok');
+  toast(`${n} bid price${n>1?'s':''} fully submitted for ${S.casino?.short||S.casino?.id||''} — ${S.cat}.<br>Effective: <b>${lbl}</b>`,'ok','Bid Submitted ✓',6000);
   render();
 }
 
 function saveDraft(){
   const its=gI(S.casino.id,S.cat);
   const n=its.filter(it=>DB.newB[`${S.casino.id}|${S.cat}|${it.item}`]).length;
-  if(n===0){sal('bal','No draft prices to save. Run Automate Bid or enter prices in the New Bid ★ column first.','wn',0);return;}
+  if(n===0){sal('bal','No draft prices to save. Run Automate Bid or enter prices in the New Bid ★ column first.','wn',0);toast('No draft prices found. Enter prices in the New Bid ★ column first.','wn','Nothing to Save');return;}
   dbSave();
   sal('bal',`✓ ${n} draft prices saved. They will remain here after refresh until you Submit.`,'ok',6000);
+  toast(`${n} draft price${n>1?'s':''} saved successfully. They stay here until you click Submit Bid.`,'ok','Draft Saved');
 }
 
 // ── BOOT ──
@@ -1904,6 +1955,7 @@ function confirmPaste(){
   dbSave();
   closePasteModal();
   sal('bal',`${applied} prices pasted from manager Excel${skipped?' ('+skipped+' blank/skipped)':''} — review margins below, then copy to casino sheet.`,'ok');
+  toast(`${applied} bid price${applied>1?'s':''} pasted successfully.${skipped?'<br>'+skipped+' blank/invalid rows skipped.':''}<br>Review margins, then click Submit Bid.`,'ok','Prices Pasted ✓');
   render();
 }
 
@@ -2161,6 +2213,7 @@ function runAutoPrice() {
   if (costDeltaHits)    parts.push(`${costDeltaHits} cost delta applied`);
   if (marginFloorHits)  parts.push(`${marginFloorHits} margin floor overrides`);
   sal('draft-al', `✓ Auto-Price (SOP v5.1): ${parts.join(' · ')}`, 'ok', 10000);
+  toast(`${applied} items auto-priced — ${increases} increase · ${decreases} decrease · ${holds} hold.<br>Review margins below before submitting.`,'ok','Auto-Price Complete',6000);
   render();
 }
 
