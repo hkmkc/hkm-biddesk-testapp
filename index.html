@@ -171,7 +171,8 @@ input:focus,select:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 
 .pgbtn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
 .pgsz{padding:4px 7px;border-radius:5px;border:1px solid var(--bd2);font-size:11px;background:var(--bg2);color:var(--tx);cursor:pointer}
 /* ── Sticky controls bar ── */
-.sticky-ctrl{position:sticky;top:0;z-index:30;background:#fff;padding-bottom:6px;margin-bottom:8px;border-bottom:1px solid var(--bd)}
+.sticky-tabs{position:sticky;top:0;z-index:31;background:#fff;padding-bottom:6px;margin-bottom:0;border-bottom:2px solid var(--bd)}
+.sticky-ctrl{position:sticky;top:var(--sticky-tabs-h,0px);z-index:30;background:#fff;padding:6px 0 6px;margin-bottom:8px;border-bottom:1px solid var(--bd)}
 /* ── Filter bar ── */
 .fbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:7px 0;margin-bottom:8px}
 .ftag{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;border:1.5px solid var(--bd2);cursor:pointer;font-size:11px;font-weight:600;background:#fff;color:var(--tx2);transition:.12s;white-space:nowrap}
@@ -675,6 +676,11 @@ function render(){
   el.scrollTop=mainScrollY;
   const newTwh=el.querySelector('.twh');
   if(newTwh) newTwh.scrollLeft=twhScrollX;
+  // Set CSS var for sticky stacking: inner .sticky-ctrl sits below .sticky-tabs
+  requestAnimationFrame(()=>{
+    const st=el.querySelector('.sticky-tabs');
+    document.documentElement.style.setProperty('--sticky-tabs-h', st?(st.offsetHeight+1)+'px':'0px');
+  });
 }
 function nav(v,o={}){Object.assign(S,{view:v},...[o]);updateHash();render();}
 
@@ -923,7 +929,7 @@ function rBids(){
       ${dlDrop}
     </div>
   </div>`;
-  return crumb+`<div class="sticky-ctrl">`+tabsRow+`</div><div id="bal" class="al"></div>${(fn[S.bTab]||rDraftBid)()}`;
+  return crumb+`<div class="sticky-tabs">`+tabsRow+`</div><div id="bal" class="al"></div>${(fn[S.bTab]||rDraftBid)()}`;
 }
 // ── DOWNLOAD ──
 function downloadTab(fmt){
@@ -1063,9 +1069,10 @@ function rDraftBid(){
   const po_a=DB.periods.map((p,i)=>_fmtP(p,i,S.cA)).join('');
   const po_b=DB.periods.map((p,i)=>_fmtP(p,i,S.cB)).join('');
   return`
+<div class="sticky-ctrl">
 ${rFltBar('db')}
-${(!DB.periods||!DB.periods.some(p=>Object.keys(p.data||{}).length>0))?`<div class="al a-wn show" style="margin-bottom:12px">No price list data. Go to <b>Upload Hub → Import Master Files</b> → upload <b>MASTER__BIDDING_-_PRICE_COMP_-_PRICE_LIST.xlsx</b></div>`:''}
-<div class="psb">
+${(!DB.periods||!DB.periods.some(p=>Object.keys(p.data||{}).length>0))?`<div class="al a-wn show" style="margin-bottom:8px">No price list data. Go to <b>Upload Hub → Import Master Files</b> → upload <b>MASTER__BIDDING_-_PRICE_COMP_-_PRICE_LIST.xlsx</b></div>`:''}
+<div class="psb" style="margin-bottom:8px">
   <div class="psg psa">
     <label class="fl"><span class="bdg bc2">PERIOD A — CURRENT</span></label>
     <select class="pss" onchange="S.cA=parseInt(this.value);render();toast('Period A updated to: <b>'+this.options[this.selectedIndex].text+'</b><br>Cost &amp; margin columns now reflect this period.','in','Period A Changed');">${po_a}</select>
@@ -1080,7 +1087,7 @@ ${(!DB.periods||!DB.periods.some(p=>Object.keys(p.data||{}).length>0))?`<div cla
     <b>Proj Margin</b> uses Period A cost
   </div>
 </div>
-<div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+<div style="display:flex;gap:8px;margin-bottom:0;flex-wrap:wrap;align-items:center">
   <button class="btn-act" onclick="runAutoPrice()">AUTOMATE BID</button>
   <button class="btn-act" onclick="openPasteModal()">PASTE BID PRICES</button>
   <button class="btn-act btn-act-gold" onclick="copyDraftBid()">COPY BID PRICES</button>
@@ -1092,6 +1099,7 @@ ${(!DB.periods||!DB.periods.some(p=>Object.keys(p.data||{}).length>0))?`<div cla
     <button class="btn btn-sm" style="font-weight:700;padding:6px 14px;border:1.5px solid var(--navy);color:var(--navy)" onclick="saveDraft()">SAVE DRAFT</button>
     <button class="btn btn-gd btn-sm" style="font-weight:800;letter-spacing:.5px;padding:6px 16px" onclick="saveBid()">SUBMIT BID</button>
   </div>
+</div>
 </div>
 <div id="draft-al" class="al" style="margin-bottom:10px"></div>
 <div class="tw twh"><table><thead><tr>
@@ -1234,8 +1242,9 @@ function rBidHist(){
       ${wkHeaders}
     </tr></thead><tbody>${tableRows}</tbody></table></div>`+rPgBar(pgd_bh,pgKey_bh);
 
-  return rFltBar('bh')+`
-<div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+  return`<div class="sticky-ctrl">
+${rFltBar('bh')}
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:0">
   <span class="fl" style="margin:0">Select Weeks to Display</span>
   <div id="wk-drop-wrap">
     <button id="wk-drop-btn" onclick="S.wkDropOpen=!S.wkDropOpen;render()">${btnLabel} \u25be</button>
@@ -1251,6 +1260,7 @@ function rBidHist(){
       </div>
     </div>
   </div>
+</div>
 </div>
 ${tableHtml}`;
 }
@@ -1338,8 +1348,7 @@ function rPLHist(){
     </tr>`;
   }).join('');
 
-  return rFltBar('pl')+`
-<div style="font-size:11px;color:var(--tx2);margin-bottom:8px">${periods.length} periods loaded &nbsp;·&nbsp; ${allItems.length} items &nbsp;·&nbsp; <em>Periods used for Draft Bid comparison</em></div>
+  return`<div class="sticky-ctrl">${rFltBar('pl')}<div style="font-size:11px;color:var(--tx2);margin-bottom:0">${periods.length} periods loaded &nbsp;·&nbsp; ${allItems.length} items &nbsp;·&nbsp; <em>Periods used for Draft Bid comparison</em></div></div>
 <div class="tw twh"><table style="border-collapse:collapse;table-layout:auto"><thead>
   <tr>
     <th rowspan="3" style="width:28px;min-width:28px;text-align:right">No.</th><th rowspan="3" style="min-width:62px">HKM</th>
@@ -2312,8 +2321,8 @@ function getLastBid(cid,cat,item){
 function rBidHistSaved(savedBids){
   const its=applyFlt(gI(S.casino.id,S.cat),'bh');
   const active=its.filter(it=>savedBids.some(p=>p.bids&&p.bids[it.item]!=null));
-  if(!active.length) return rFltBar('bh')+'<div style="padding:20px;color:var(--tx3);font-size:13px">No saved bids yet. Use Draft Bid → enter prices → SAVE BID.</div>';
-  const note=`<div style="font-size:11px;color:var(--tx2);margin-bottom:8px">${savedBids.length} saved periods &nbsp;·&nbsp; ${active.length} items &nbsp;·&nbsp; <strong>*</strong> = most recent</div>`;
+  if(!active.length) return`<div class="sticky-ctrl">${rFltBar('bh')}</div>`+'<div style="padding:20px;color:var(--tx3);font-size:13px">No saved bids yet. Use Draft Bid → enter prices → SAVE BID.</div>';
+  const note=`<div style="font-size:11px;color:var(--tx2);margin-bottom:0">${savedBids.length} saved periods &nbsp;·&nbsp; ${active.length} items &nbsp;·&nbsp; <strong>*</strong> = most recent</div>`;
   let h='<div class="tw twh"><table><thead><tr>';
   h+='<th class="sth" style="width:28px;min-width:28px;text-align:right">No.</th>';
   h+='<th class="s1 sth" style="min-width:70px">HKM</th><th class="s2 sth" style="min-width:70px">Item #</th>';
@@ -2338,7 +2347,7 @@ function rBidHistSaved(savedBids){
     h+='</tr>';
   });
   h+='</tbody></table></div>';
-  return rFltBar('bh')+note+h+rPgBar(pgd,pgKey);
+  return`<div class="sticky-ctrl">${rFltBar('bh')}${note}</div>`+h+rPgBar(pgd,pgKey);
 }
 
 function rBidHistImported(impData,savedBids=[]){
@@ -2361,7 +2370,7 @@ function rBidHistImported(impData,savedBids=[]){
 
   if(!active.length)return'<div style="padding:20px;color:var(--tx3);font-size:13px">No bid prices imported yet for this category. Use Upload Hub → Import Master Files.</div>';
 
-  const note=`<div style="font-size:11px;color:var(--tx2);margin-bottom:8px">
+  const note=`<div style="font-size:11px;color:var(--tx2);margin-bottom:0">
     Showing last ${totalShown} of ${allCols.length+savedBids.length} periods &nbsp;·&nbsp;
     ${active.length} of ${its.length} items have bid history &nbsp;·&nbsp;
     <strong>*</strong> = most recent period
@@ -2412,7 +2421,7 @@ function rBidHistImported(impData,savedBids=[]){
     h+='</tr>';
   });
   h+='</tbody></table></div>';
-  return rFltBar('bh')+note+h+rPgBar(pgd_bh,pgKey_bh);
+  return`<div class="sticky-ctrl">${rFltBar('bh')}${note}</div>`+h+rPgBar(pgd_bh,pgKey_bh);
 }
 
 // ══════════════════════════════════════════════════════════════
