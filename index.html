@@ -393,14 +393,27 @@ tr:hover .del-row{opacity:1}
 
 
 /* ── Login screen ── */
-#login-screen{display:none;position:fixed;inset:0;background:var(--navy);z-index:1000;flex-direction:column;align-items:center;justify-content:center;gap:0}
+#login-screen{display:none;position:fixed;inset:0;background:linear-gradient(135deg,#060e1f 0%,#0a1a3a 30%,#122d62 65%,#0b2050 100%);z-index:1000;flex-direction:column;align-items:center;justify-content:center;gap:0;overflow:hidden}
+#login-screen::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 25% 15%,rgba(36,120,200,.35) 0%,transparent 55%),radial-gradient(ellipse at 80% 85%,rgba(180,130,0,.12) 0%,transparent 50%);pointer-events:none}
 #login-screen.show{display:flex}
-.login-box{background:#fff;border-radius:16px;padding:36px 40px;width:90%;max-width:400px;box-shadow:0 16px 60px rgba(0,0,0,.3)}
-.login-logo{font-size:24px;font-weight:900;color:var(--navy);margin-bottom:4px}
-.login-sub{font-size:12px;color:var(--tx3);margin-bottom:24px}
-.login-field{margin-bottom:14px}
-.login-field label{display:block;font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
-#login-al{font-size:12px;color:var(--red);min-height:18px;margin-bottom:10px}
+.login-box{position:relative;background:rgba(255,255,255,.07);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:1px solid rgba(255,255,255,.16);border-radius:22px;padding:42px 46px;width:90%;max-width:420px;box-shadow:0 28px 70px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.18)}
+.login-logo{font-size:28px;font-weight:900;color:#fff;margin-bottom:4px;letter-spacing:-.5px}
+.login-sub{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:28px;letter-spacing:.3px}
+.login-field{margin-bottom:16px}
+.login-field label{display:block;font-size:10px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.login-field input{width:100%;padding:12px 14px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.18);border-radius:10px;color:#fff;font-size:14px;font-family:inherit;outline:none;transition:.2s;box-sizing:border-box}
+.login-field input::placeholder{color:rgba(255,255,255,.3)}
+.login-field input:focus{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.42);box-shadow:0 0 0 3px rgba(255,255,255,.07)}
+.login-btn{width:100%;padding:13px;background:linear-gradient(135deg,#1B5C9E 0%,#2478c8 100%);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.3px;box-shadow:0 4px 18px rgba(27,92,158,.55);transition:.2s;margin-top:2px}
+.login-btn:hover{background:linear-gradient(135deg,#2478c8 0%,#1B5C9E 100%);box-shadow:0 6px 22px rgba(27,92,158,.7);transform:translateY(-1px)}
+.login-btn:active{transform:translateY(0)}
+#login-al{font-size:12px;color:#ffaaaa;min-height:18px;margin-bottom:10px}
+.login-req-link{color:rgba(255,255,255,.65);cursor:pointer;font-weight:700;transition:.15s}
+.login-req-link:hover{color:#fff}
+.login-signup-box{margin-top:18px;border-top:1px solid rgba(255,255,255,.1);padding-top:18px}
+.login-signup-box input{width:100%;padding:10px 14px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);border-radius:9px;color:#fff;font-size:13px;font-family:inherit;outline:none;margin-bottom:9px;box-sizing:border-box}
+.login-signup-box input::placeholder{color:rgba(255,255,255,.3)}
+.login-signup-box input:focus{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.38)}
 
 
 .rn{font-size:10px;color:var(--tx3);text-align:right;padding-right:6px!important;min-width:28px;width:28px;user-select:none}
@@ -560,7 +573,8 @@ async function sbSync(){
 }
 
 // Pull latest data from Supabase — only applies if Supabase data is STRICTLY newer than local
-async function sbLoad(forceRender=false){
+// forceUsers=true: always refresh _users from Supabase (used during login to fix cross-device auth)
+async function sbLoad(forceRender=false, forceUsers=false){
   if(!SB) return;
   try{
     const {data,error} = await SB.from('app_data').select('data').eq('key','hkm_main').single();
@@ -569,6 +583,11 @@ async function sbLoad(forceRender=false){
       const localTime=DB._savedAt?new Date(DB._savedAt).getTime():0;
       // Skip if local is same age or newer — prevents the 60s poll from overwriting and re-rendering
       if(sbTime>0&&localTime>0&&sbTime<=localTime){
+        // Even when skipping full sync, always refresh user list from Supabase during login
+        if(forceUsers&&data.data._users&&data.data._users.length){
+          DB._users=data.data._users;
+          localStorage.setItem('hkm_db',JSON.stringify(DB));
+        }
         _sbReady=true;
         return;
       }
@@ -799,7 +818,7 @@ function restoreFromHash(){
   }else if(p[0]==='casino'&&p[1]){
     const c=DB.casinos.find(x=>x.id===p[1]);
     if(c){S.view='casino';S.casino=c;DB._openC[c.id]=true;}
-  }else if(p[0]==='upload'&&DB._isAdmin){
+  }else if(p[0]==='upload'){
     S.view='upload';S.uTab=p[1]||'qbe';
   }else if(p[0]==='analytics'){
     S.view='analytics';
@@ -821,7 +840,7 @@ function rSB(){
   const _icoUp=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/><path d="M20 18v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2"/></svg>`;
   h+=`<div class="sb-item ${S.view==='dashboard'?'on':''}" onclick="nav('dashboard')"><span class="sb-icon">${_icoDash}</span> Dashboard</div>`;
   h+=`<div class="sb-item ${S.view==='analytics'?'on':''}" onclick="nav('analytics')"><span class="sb-icon">${_icoAn}</span> Analytics</div>`;
-  h+=`<div class="sb-item ${S.view==='upload'?'on':''}" onclick="nav('upload')"><span class="sb-icon">${_icoUp}</span> Upload Hub${!DB._isAdmin?' 🔒':''}</div>`;
+  h+=`<div class="sb-item ${S.view==='upload'?'on':''}" onclick="nav('upload')"><span class="sb-icon">${_icoUp}</span> Upload Hub</div>`;
   h+='<div class="sb-divider"></div>';
   const _icoCasinos=`<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><defs><polygon id="hkm5star" points="0,-2 0.5,-0.688 1.902,-0.618 0.808,0.263 1.176,1.618 0,0.85 -1.176,1.618 -0.808,0.263 -1.902,-0.618 -0.5,-0.688"/></defs><use href="#hkm5star" transform="translate(2.5,3)"/><use href="#hkm5star" transform="translate(7,3)"/><use href="#hkm5star" transform="translate(11.5,3)"/><use href="#hkm5star" transform="translate(16.5,3)"/><use href="#hkm5star" transform="translate(21.5,3)"/><path fill-rule="evenodd" d="M1,7 H23 V23 H1 Z M4,10 H8.5 V14.5 H4 Z M10,10 H14 V14.5 H10 Z M15.5,10 H20 V14.5 H15.5 Z M9.5,17.5 H14.5 V23 H9.5 Z"/></svg>`;
   h+=`<div class="sb-cat-hd"><span class="sb-icon">${_icoCasinos}</span> Casinos</div>`;
@@ -843,10 +862,10 @@ function rSB(){
           <span class="sb-cat-c">${gI(c.id,cat).length}</span>
         </div>`;
       });
-      if(DB._isAdmin)h+=`<div class="sb-add" onclick="nav('upload',{uTab:'addbid'})">+ Add Bid Category</div>`;
+      h+=`<div class="sb-add" onclick="nav('upload',{uTab:'addbid'})">+ Add Bid Category</div>`;
     }
   });
-  if(DB._isAdmin)h+=`<div class="sb-add" style="padding-left:14px;margin-top:4px" onclick="nav('upload',{uTab:'addbid'})">+ Add Casino</div>`;
+  h+=`<div class="sb-add" style="padding-left:14px;margin-top:4px" onclick="nav('upload',{uTab:'addbid'})">+ Add Casino</div>`;
   el.innerHTML=h;
 }
 function sbToggle(cid){
@@ -972,10 +991,10 @@ function rBids(){
   const tabs=[
     {id:'bidhistory',l:'Bid Price History'},
     {id:'plhistory',l:'Price List History'},
-    {id:'draftbid',l:DB._isAdmin?'Draft Bid':'Draft Bid 🔒'},
+    {id:'draftbid',l:'Draft Bid'},
   ];
   const fn={
-    draftbid:DB._isAdmin?rDraftBid:()=>rLocked('You do not have access to this field.'),
+    draftbid:rDraftBid,
     bidhistory:rBidHist,
     plhistory:rPLHist
   };
@@ -1342,7 +1361,6 @@ function twkKeepDrop(id,checked){
 function selWk(n){S.selW.clear();WK.slice(-Math.min(n,WK.length)).forEach(w=>S.selW.add(w.id));render();}
 
 function delPeriod(id){
-  if(!DB._isAdmin) return;
   if(!confirm('Delete this period? This cannot be undone.')) return;
   DB.periods=(DB.periods||[]).filter(p=>p.id!==id);
   dbSave();
@@ -1441,7 +1459,6 @@ function rLocked(msg='You do not have access to this feature.'){
 
 // ── UPLOAD HUB ──
 function rUpload(){
-  if(!DB._isAdmin) return rLocked('You do not have access to this field.');
   const tabs=[{id:'qbe',l:'1 QBE Purchase History'},{id:'pl',l:'2 QB Price List'},{id:'casino',l:'3 Casino Sheet'},{id:'addbid',l:'4 Add Category / Casino'},{id:'import',l:'5 Import Master Files'}];
   return`
 <div style="margin-bottom:18px">
@@ -4195,8 +4212,6 @@ function requestAlerts(){
   });
 }
 function checkAlerts(){
-  // Due-date alerts are admin-only — members get bid submission alerts instead
-  if(!DB._isAdmin) return;
   if(!('Notification' in window)||Notification.permission!=='granted')return;
   const now=getPST();
   if(!DB.alertsSent)DB.alertsSent={};
@@ -4497,10 +4512,10 @@ async function doLogin(){
   const email=(document.getElementById('login-email').value||'').trim().toLowerCase();
   const pw=document.getElementById('login-pw').value||'';
   if(!email||!pw){document.getElementById('login-al').textContent='Enter email and password.';return;}
-  // If Supabase hasn't loaded yet, fetch now so we have the latest user list
-  if(SB&&!_sbReady){
+  // Always fetch latest user list from Supabase before login — fixes cross-device auth issues
+  if(SB){
     document.getElementById('login-al').textContent='Connecting… please wait.';
-    await sbLoad(false);
+    await sbLoad(false, true); // forceUsers=true: always get fresh user list regardless of timestamp
   }
   document.getElementById('login-al').textContent='';
   _doLoginWithUsers(email, pw, getUsers());
@@ -4760,27 +4775,32 @@ window.addEventListener('hashchange',function(){
 <!-- LOGIN SCREEN -->
 <div id="login-screen">
   <div class="login-box">
-    <div class="login-logo">HKM BidDesk</div>
-    <div class="login-sub">Hong Kong Market — Internal Tool</div>
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="display:inline-flex;align-items:center;justify-content:center;width:58px;height:58px;background:linear-gradient(135deg,#1B5C9E,#2478c8);border-radius:15px;margin-bottom:14px;box-shadow:0 8px 22px rgba(27,92,158,.55)">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8h10M7 12h6"/></svg>
+      </div>
+      <div class="login-logo">HKM BidDesk</div>
+      <div class="login-sub">Hong Kong Market — Internal Tool</div>
+    </div>
     <div class="login-field">
-      <label>Email</label>
+      <label>Email Address</label>
       <input type="email" id="login-email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <div class="login-field">
       <label>Password</label>
-      <input type="password" id="login-pw" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+      <input type="password" id="login-pw" placeholder="Enter your password" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <div id="login-al"></div>
-    <button class="btn btn-nv" style="width:100%;padding:10px;font-size:14px" onclick="doLogin()">Log In</button>
-    <div style="margin-top:16px;text-align:center;font-size:12px;color:var(--tx3)">
-      Don't have access? <span style="color:var(--navy);cursor:pointer;font-weight:700" onclick="showSignup()">Request access</span>
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div style="margin-top:18px;text-align:center;font-size:12px;color:rgba(255,255,255,.45)">
+      Don't have access? <span class="login-req-link" onclick="showSignup()">Request access</span>
     </div>
-    <div id="signup-area" style="display:none;margin-top:16px;border-top:1px solid var(--bd);padding-top:14px">
-      <div style="font-size:12px;color:var(--tx2);margin-bottom:10px">Enter your details. Admin will approve within 24–72 hrs.</div>
-      <input type="text" id="signup-name" placeholder="Full name" style="margin-bottom:8px">
-      <input type="email" id="signup-email2" placeholder="Email" style="margin-bottom:8px">
-      <input type="password" id="signup-pw2" placeholder="Set password" style="margin-bottom:10px">
-      <button class="btn btn-nv btn-sm" onclick="doSignup()">Request Access</button>
+    <div id="signup-area" class="login-signup-box" style="display:none">
+      <div style="font-size:12px;color:rgba(255,255,255,.45);margin-bottom:12px">Enter your details. Admin will approve within 24–72 hrs.</div>
+      <input type="text" id="signup-name" placeholder="Full name">
+      <input type="email" id="signup-email2" placeholder="Email">
+      <input type="password" id="signup-pw2" placeholder="Set password">
+      <button class="login-btn" style="font-size:13px;padding:11px;margin-top:2px" onclick="doSignup()">Request Access</button>
     </div>
   </div>
 </div>
