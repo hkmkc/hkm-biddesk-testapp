@@ -1361,10 +1361,53 @@ function twkKeepDrop(id,checked){
 function selWk(n){S.selW.clear();WK.slice(-Math.min(n,WK.length)).forEach(w=>S.selW.add(w.id));render();}
 
 function delPeriod(id){
-  if(!confirm('Delete this period? This cannot be undone.')) return;
   DB.periods=(DB.periods||[]).filter(p=>p.id!==id);
   dbSave();
   render();
+}
+function showPeriodCtxMenu(e,id,lbl){
+  e.preventDefault();
+  e.stopPropagation();
+  const menu=document.getElementById('period-ctx-menu');
+  if(!menu)return;
+  menu.dataset.pid=id;
+  menu.dataset.plbl=lbl;
+  menu.style.display='block';
+  const x=Math.min(e.clientX,window.innerWidth-160);
+  const y=Math.min(e.clientY,window.innerHeight-80);
+  menu.style.left=x+'px';
+  menu.style.top=y+'px';
+}
+function _closePeriodCtxMenu(){
+  const m=document.getElementById('period-ctx-menu');
+  if(m)m.style.display='none';
+}
+function openPeriodDelModal(){
+  const menu=document.getElementById('period-ctx-menu');
+  const id=menu?menu.dataset.pid:'';
+  const lbl=menu?menu.dataset.plbl:'';
+  _closePeriodCtxMenu();
+  const modal=document.getElementById('period-del-modal');
+  if(!modal)return;
+  modal.dataset.pid=id;
+  document.getElementById('period-del-lbl').textContent=lbl||id;
+  document.getElementById('period-del-input').value='';
+  document.getElementById('period-del-err').textContent='';
+  modal.style.display='flex';
+  setTimeout(()=>document.getElementById('period-del-input').focus(),100);
+}
+function confirmPeriodDelete(){
+  const val=(document.getElementById('period-del-input').value||'').trim().toLowerCase();
+  if(val!=='delete'){
+    document.getElementById('period-del-err').textContent='Type "delete" exactly to confirm.';
+    return;
+  }
+  const id=document.getElementById('period-del-modal').dataset.pid;
+  document.getElementById('period-del-modal').style.display='none';
+  delPeriod(id);
+}
+function closePeriodDelModal(){
+  document.getElementById('period-del-modal').style.display='none';
 }
 
 // ── PRICE LIST HISTORY ──
@@ -1413,7 +1456,7 @@ function rPLHist(){
   const pgKey_pl='pl_all';
   const pgd_pl=doPg(allItems,pgKey_pl);
 
-  const colHeaders1=periods.map(p=>`<th colspan="2" style="background:var(--navy3);text-align:center;font-size:10px;padding:4px 6px;border:1px solid rgba(255,255,255,.2);white-space:normal;min-width:100px;max-width:120px;word-break:break-word;position:relative">${p.bid_type||p.lbl}${DB._isAdmin?`<span onclick="delPeriod('${p.id}')" title="Delete this period" style="position:absolute;top:2px;right:4px;cursor:pointer;color:rgba(255,100,100,.8);font-size:10px;line-height:1;font-weight:700">✕</span>`:''}` + `</th>`).join('');
+  const colHeaders1=periods.map(p=>`<th colspan="2" oncontextmenu="showPeriodCtxMenu(event,'${p.id}',${JSON.stringify(p.lbl||p.bid_type||'').replace(/"/g,'&quot;')})" style="background:var(--navy3);text-align:center;font-size:10px;padding:4px 6px;border:1px solid rgba(255,255,255,.2);white-space:normal;min-width:100px;max-width:120px;word-break:break-word;position:relative;cursor:context-menu">${p.bid_type||p.lbl}</th>`).join('');
   const colHeaders2=periods.map(p=>`<th colspan="2" style="background:var(--navy2);text-align:center;font-size:10px;padding:4px 6px;border:1px solid rgba(255,255,255,.2);white-space:normal;min-width:100px">${p.lbl}</th>`).join('');
   const colHeaders3=periods.map(()=>`<th style="background:var(--navy4);font-size:10px;padding:5px 8px;border:1px solid rgba(255,255,255,.2);width:60px;min-width:60px;text-align:right">Cost</th><th style="background:var(--navy4);font-size:10px;padding:5px 8px;border:1px solid rgba(255,255,255,.2);width:60px;min-width:60px;text-align:right">Price</th>`).join('');
 
@@ -4774,6 +4817,8 @@ function migrateLocalUsers(){
 // Auth runs after DOM is ready
 window.addEventListener('DOMContentLoaded',function(){
   if(checkAuth()){restoreFromHash();render();startAlerts();updateMenuForRole();setTimeout(()=>{pruneOldData();initColResize();},800);}
+  document.addEventListener('click',function(){_closePeriodCtxMenu();});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){_closePeriodCtxMenu();closePeriodDelModal();}});
 });
 window.addEventListener('hashchange',function(){
   if(checkAuth()){restoreFromHash();render();}
@@ -4840,6 +4885,32 @@ window.addEventListener('hashchange',function(){
   </div>
 </div>
 
+
+<!-- PERIOD COLUMN RIGHT-CLICK CONTEXT MENU -->
+<div id="period-ctx-menu" style="display:none;position:fixed;z-index:3000;background:#fff;border:1.5px solid var(--bd2);border-radius:9px;box-shadow:0 6px 24px rgba(0,0,0,.15);min-width:150px;overflow:hidden">
+  <div style="padding:6px 0">
+    <div onclick="openPeriodDelModal()" style="padding:9px 16px;font-size:13px;font-weight:600;color:#c0392b;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.12s" onmouseover="this.style.background='#fff0f0'" onmouseout="this.style.background=''">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      Delete Period
+    </div>
+  </div>
+</div>
+
+<!-- PERIOD DELETE CONFIRMATION MODAL -->
+<div id="period-del-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3001;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;padding:28px 32px;width:90%;max-width:380px;box-shadow:0 16px 48px rgba(0,0,0,.25)">
+    <div style="font-size:16px;font-weight:800;color:var(--navy);margin-bottom:6px">Delete Period?</div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:4px">You are about to permanently delete:</div>
+    <div id="period-del-lbl" style="font-size:13px;font-weight:700;color:#c0392b;background:#fff0f0;border-radius:6px;padding:6px 10px;margin-bottom:16px"></div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:6px">Type <strong>delete</strong> to confirm. This cannot be undone.</div>
+    <input id="period-del-input" type="text" placeholder='Type "delete" here' onkeydown="if(event.key==='Enter')confirmPeriodDelete()" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd2);border-radius:8px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:6px">
+    <div id="period-del-err" style="font-size:11px;color:#c0392b;min-height:16px;margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px">
+      <button onclick="confirmPeriodDelete()" style="flex:1;padding:10px;background:#c0392b;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Delete</button>
+      <button onclick="closePeriodDelModal()" style="flex:1;padding:10px;background:var(--bg3);color:var(--tx);border:1px solid var(--bd2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <!-- ADMIN PANEL -->
 <div id="admin-panel-float" style="display:none;position:fixed;top:54px;right:12px;width:480px;max-height:80vh;overflow-y:auto;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.2);z-index:2001;padding:0">
