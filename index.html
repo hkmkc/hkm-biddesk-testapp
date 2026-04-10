@@ -212,7 +212,7 @@ tr:hover .del-row{opacity:1}
 .dash-meta{text-align:right;flex-shrink:0}
 .dash-meta-date{font-size:12px;font-weight:700;color:var(--tx2)}
 .dash-meta-time{font-size:11px;color:var(--tx3);margin-top:1px}
-.dash-search{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;background:var(--bg3);border:1.5px solid var(--bd);border-radius:8px;padding:6px 10px}
+.dash-search{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;padding:10px 14px}
 .dash-search-grp{display:flex;flex-direction:column;gap:2px}
 .dash-section-hd{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:var(--navy);margin-bottom:5px;margin-top:8px;padding-bottom:4px;border-bottom:2px solid var(--bg3)}
 .dash-section-hd:first-of-type{margin-top:0}
@@ -261,7 +261,7 @@ tr:hover .del-row{opacity:1}
 .wf-step.done .wf-step-lbl{color:var(--green)}
 .wf-step.active .wf-step-lbl{color:var(--navy);font-weight:700}
 /* Calendar notes */
-.dash-cal-dy{font-size:10px;padding:2px 1px;position:relative;line-height:1.2;cursor:pointer;border-radius:4px;transition:.1s}
+.dash-cal-dy{font-size:11px;padding:3px 1px;position:relative;line-height:1.3;cursor:pointer;border-radius:5px;transition:.1s}
 .dash-cal-dy:not(:empty):hover{background:rgba(27,92,158,.07)}
 .dash-cal-note-dot{width:4px;height:4px;border-radius:50%;background:var(--gold2);display:inline-block;margin-top:1px}
 /* Cal note modal */
@@ -271,10 +271,10 @@ tr:hover .del-row{opacity:1}
 .cal-note-ta{width:100%;border:1.5px solid var(--bd);border-radius:8px;padding:8px 10px;font-size:13px;resize:vertical;min-height:80px;box-sizing:border-box;font-family:inherit}
 .cal-note-ta:focus{outline:none;border-color:var(--navy)}
 .cal-note-btns{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
-.dash-cal{background:#fff;border:1.5px solid var(--bd);border-radius:10px;padding:8px 10px;box-shadow:var(--sh);margin-bottom:8px}
-.dash-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0;text-align:center}
-.dash-cal-dow{font-size:8px;font-weight:700;color:var(--tx3);padding:1px 0 4px}
-.dash-cal-dy.today .dash-cal-dnum{background:var(--navy);color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-weight:800}
+.dash-cal{background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:12px 14px;box-shadow:var(--sh);margin-bottom:10px}
+.dash-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center}
+.dash-cal-dow{font-size:9px;font-weight:700;color:var(--tx3);padding:2px 0 5px}
+.dash-cal-dy.today .dash-cal-dnum{background:var(--navy);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-weight:800}
 .dash-cal-dy.has-due{font-weight:700;color:var(--tx)}
 .dash-cal-dots{display:flex;gap:1px;justify-content:center;margin-top:0;min-height:4px}
 .dash-cal-dot{width:3px;height:3px;border-radius:50%;display:inline-block}
@@ -3865,18 +3865,18 @@ function rDash(){
   </div>
   <div class="dash-search">
     <div class="dash-search-grp">
-      <div class="fl" style="margin:0 0 2px;font-size:9px">Casino</div>
-      <select id="dash-casino" style="min-width:220px;font-size:12px;padding:3px 6px">${casinoOpts}</select>
+      <div class="fl" style="margin:0 0 3px">Casino</div>
+      <select id="dash-casino" style="min-width:240px">${casinoOpts}</select>
     </div>
-    <div class="dash-search-grp" style="flex:1;min-width:160px">
-      <div class="fl" style="margin:0 0 2px;font-size:9px">💰 Bid Prices Search — Item # or HKM Code</div>
-      <input type="text" id="dash-q" placeholder="Search by item number or HKM code…" style="width:100%;font-size:12px;padding:3px 8px" onkeydown="if(event.key==='Enter')dashSearch()">
+    <div class="dash-search-grp" style="flex:1;min-width:200px">
+      <div class="fl" style="margin:0 0 3px">💰 Bid Prices Search — Item # or HKM Code</div>
+      <input type="text" id="dash-q" placeholder="Search by item number or HKM code…" style="width:100%" onkeydown="if(event.key==='Enter')dashSearch()">
     </div>
-    <div style="display:flex;gap:6px;align-items:flex-end">
-      <button class="btn btn-nv" onclick="dashSearch()" style="padding:4px 12px;font-size:12px">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:3px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <button class="btn btn-nv" onclick="dashSearch()" style="padding:7px 18px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search
       </button>
-      <button class="btn" onclick="dashSearchAll()" style="padding:4px 10px;font-size:12px">All</button>
+      <button class="btn" onclick="dashSearchAll()" style="padding:7px 14px">All</button>
     </div>
   </div>
 </div>
@@ -3970,6 +3970,22 @@ function rDash(){
 </div>
 `;
 }
+function _getBidValidThru(cid, weekly){
+  // Find the DUE_DATE for this casino+type and return the next due date formatted
+  const type=weekly?'weekly':'monthly';
+  const dd=DUE_DATES.find(d=>d.casino===cid&&d.type===type);
+  if(!dd)return{label:'—',isCurrent:false};
+  const now=getPST();
+  const next=getNextDue(dd);
+  const ms=next-now;
+  const dateStr=next.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',month:'short',day:'numeric',year:'numeric'});
+  // "current" = deadline is still in the future (bid still active)
+  const isCurrent=ms>0;
+  const isUrgent=ms>0&&ms<86400000; // < 24h
+  const isExpired=ms<=0;
+  return{label:dateStr,isCurrent,isUrgent,isExpired,ms};
+}
+
 function dashSearch(){
   const cid=document.getElementById('dash-casino')?.value;
   const q=(document.getElementById('dash-q')?.value||'').trim().toLowerCase();
@@ -3982,7 +3998,7 @@ function dashSearch(){
       if(!q||it.item.toLowerCase().includes(q)||(it.hkm||'').toLowerCase().includes(q)){
         const weekly=isCatWeekly(cid,cat);
         const price=getLastBid(cid,cat,it.item);
-        if(q||(it.hkm&&price!=null))results.push({...it,cat,weekly,price});
+        if(q||(it.hkm&&price!=null))results.push({...it,cat,weekly,price,cid});
       }
     });
   });
@@ -3998,7 +4014,7 @@ function dashSearchAll(){
   casino.cats.forEach(cat=>{
     gI(cid,cat).forEach(it=>{
       const price=getLastBid(cid,cat,it.item);
-      if(it.hkm&&price!=null)results.push({...it,cat,weekly:isCatWeekly(cid,cat),price});
+      if(it.hkm&&price!=null)results.push({...it,cat,weekly:isCatWeekly(cid,cat),price,cid});
     });
   });
   renderDashResults(results, casino.name);
@@ -4012,8 +4028,11 @@ function renderDashResults(results, casinoName){
   let tbl='<div class="tw" style="max-height:420px;overflow-y:auto"><table><thead><tr>';
   tbl+='<th style="min-width:62px">HKM</th><th style="min-width:82px">Item #</th>';
   tbl+='<th style="min-width:200px">Description</th><th>UM</th><th>Category</th>';
-  tbl+='<th style="min-width:64px">Last Bid</th><th style="min-width:50px">Type</th></tr></thead><tbody>';
+  tbl+='<th style="min-width:64px">Bid Price</th><th style="min-width:90px">Valid Through</th><th style="min-width:44px">Type</th></tr></thead><tbody>';
   results.forEach(r=>{
+    const vt=_getBidValidThru(r.cid,r.weekly);
+    const vtCol=vt.isExpired?'var(--red)':vt.isUrgent?'#d97706':'var(--green)';
+    const vtTip=vt.isExpired?'Bid period ended':vt.isUrgent?'Due soon!':'Bid currently active';
     tbl+=`<tr>
       <td style="font-size:11px;color:#0c447c;font-weight:700">${r.hkm||'<span class="nc">—</span>'}</td>
       <td style="font-size:11px">${r.item}</td>
@@ -4021,6 +4040,7 @@ function renderDashResults(results, casinoName){
       <td style="font-size:11px;color:var(--tx2)">${r.unit}</td>
       <td style="font-size:11px;color:var(--tx2)">${r.cat}</td>
       <td class="pr">${r.price!=null?'$'+f(r.price):'<span class="nc">—</span>'}</td>
+      <td style="font-size:10px;font-weight:700;color:${vtCol};white-space:nowrap" title="${vtTip}">${vt.label}</td>
       <td><span class="bdg ${r.weekly?'bc2':'bp'}">${r.weekly?'WK':'MTH'}</span></td>
     </tr>`;
   });
