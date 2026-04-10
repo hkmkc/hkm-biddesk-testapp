@@ -271,12 +271,12 @@ tr:hover .del-row{opacity:1}
 .cal-note-ta{width:100%;border:1.5px solid var(--bd);border-radius:8px;padding:8px 10px;font-size:13px;resize:vertical;min-height:80px;box-sizing:border-box;font-family:inherit}
 .cal-note-ta:focus{outline:none;border-color:var(--navy)}
 .cal-note-btns{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
-.dash-cal{background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:12px 14px;box-shadow:var(--sh);margin-bottom:10px}
+.dash-cal{background:#fff;border:2.5px solid var(--bd2);border-radius:12px;padding:12px 14px;box-shadow:var(--sh);margin-bottom:10px}
 .dash-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
-.dash-cal-dow{font-size:9px;font-weight:700;color:var(--tx3);padding:2px 0 6px;text-transform:uppercase;letter-spacing:.3px}
+.dash-cal-dow{font-size:9px;font-weight:800;color:var(--tx2);padding:2px 0 6px;text-transform:uppercase;letter-spacing:.5px}
 .dash-cal-dy.has-wk{background:rgba(27,92,158,.09);border-radius:6px}
-.dash-cal-dy.has-mth{background:rgba(240,180,41,.13);border-radius:6px}
-.dash-cal-dy.has-wk.has-mth{background:linear-gradient(135deg,rgba(27,92,158,.1) 55%,rgba(240,180,41,.14) 55%);border-radius:6px}
+.dash-cal-dy.has-mth{background:rgba(217,143,0,.16);border-radius:6px}
+.dash-cal-dy.has-wk.has-mth{background:linear-gradient(135deg,rgba(27,92,158,.1) 55%,rgba(217,143,0,.18) 55%);border-radius:6px}
 .dash-cal-dy.has-wk .dash-cal-dnum{color:var(--navy);font-weight:800}
 .dash-cal-dy.has-mth:not(.has-wk) .dash-cal-dnum{color:#92400e;font-weight:800}
 .dash-cal-dy.today .dash-cal-dnum{background:var(--navy);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-weight:800}
@@ -3776,7 +3776,7 @@ function rDashCal(now){
       <div style="font-size:11px;font-weight:800;color:var(--navy)">${mnames[mo]} ${y}</div>
       <div style="font-size:10px;color:var(--tx3);display:flex;gap:8px;align-items:center">
         <span><span style="display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--navy);margin-right:4px;vertical-align:middle"></span>Weekly</span>
-        <span><span style="display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--gold2);margin-right:4px;vertical-align:middle"></span>Monthly</span>
+        <span><span style="display:inline-block;width:14px;height:3px;border-radius:2px;background:#d98f00;margin-right:4px;vertical-align:middle"></span>Monthly</span>
       </div>
     </div>
     <div class="dash-cal-grid">`;
@@ -3793,7 +3793,7 @@ function rDashCal(now){
       <span class="dash-cal-dnum">${d}</span>
       <div class="dash-cal-dots">
         ${hasW?'<span class="dash-cal-dot" style="background:var(--navy)"></span>':''}
-        ${hasM?'<span class="dash-cal-dot" style="background:var(--gold2)"></span>':''}
+        ${hasM?'<span class="dash-cal-dot" style="background:#d98f00"></span>':''}
         ${hasNote?'<span class="dash-cal-note-dot"></span>':''}
       </div>
     </div>`;
