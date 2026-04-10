@@ -3883,35 +3883,34 @@ function rDash(){
 <div id="dash-al" class="al" style="margin-bottom:6px"></div>
 <div id="dash-results" class="dsearch-res" style="margin-bottom:16px"></div>
 
-<div class="kpi-row">
-  <div class="kpi-card">
-    <div class="kpi-card-icon">🗓️</div>
-    <div class="kpi-card-val">${weeklyDue.length}</div>
-    <div class="kpi-card-lbl">Weekly Bids</div>
-    <div class="kpi-card-sub">${fmtCountdown(nextWeeklyMs)} to next</div>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-card-icon">📅</div>
-    <div class="kpi-card-val">${monthlyDue.length}</div>
-    <div class="kpi-card-lbl">Monthly Bids</div>
-    <div class="kpi-card-sub">${fmtCountdown(nextMonthlyMs)} to next</div>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-card-icon">🔵</div>
-    <div class="kpi-card-val">${inProgress}</div>
-    <div class="kpi-card-lbl">In Progress</div>
-    <div class="kpi-card-sub">Working on bids</div>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-card-icon">✅</div>
-    <div class="kpi-card-val">${submitted}<span style="font-size:14px;color:var(--tx3)">/${allDue.length}</span></div>
-    <div class="kpi-card-lbl">Submitted</div>
-    <div class="kpi-card-sub">${Math.round(submitted/allDue.length*100)}% complete</div>
-  </div>
-</div>
-
 <div class="dash-main-grid">
   <div class="dash-wf-col">
+    <div class="kpi-row" style="margin-bottom:12px">
+      <div class="kpi-card">
+        <div class="kpi-card-icon">🗓️</div>
+        <div class="kpi-card-val">${weeklyDue.length}</div>
+        <div class="kpi-card-lbl">Weekly Bids</div>
+        <div class="kpi-card-sub">${fmtCountdown(nextWeeklyMs)} to next</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card-icon">📅</div>
+        <div class="kpi-card-val">${monthlyDue.length}</div>
+        <div class="kpi-card-lbl">Monthly Bids</div>
+        <div class="kpi-card-sub">${fmtCountdown(nextMonthlyMs)} to next</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card-icon">🔵</div>
+        <div class="kpi-card-val">${inProgress}</div>
+        <div class="kpi-card-lbl">In Progress</div>
+        <div class="kpi-card-sub">Working on bids</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card-icon">✅</div>
+        <div class="kpi-card-val">${submitted}<span style="font-size:14px;color:var(--tx3)">/${allDue.length}</span></div>
+        <div class="kpi-card-lbl">Submitted</div>
+        <div class="kpi-card-sub">${Math.round(submitted/allDue.length*100)}% complete</div>
+      </div>
+    </div>
     <div class="dash-section-hd" style="margin-top:0">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       Bidding Workflow Tracker
