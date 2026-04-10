@@ -2856,9 +2856,15 @@ function importBidMaster(file){
       });
 
       dbSave();hProg('imp');
-      sal('imp-al',`Done — ${totalItems} items across ${totalCats} categories imported for ${CASINO_NAMES[casinoId]||casinoId}. Categories now appear in the sidebar.`,'ok');
       rSB();render();
-    }catch(err){hProg('imp');sal('imp-al','Error: '+err.message,'er',0);}
+      if(totalCats===0){
+        toast(`No categories were imported from this file. Check that sheets have an HKM header row and bid price columns.`,'wn','Import Warning',8000);
+        sal('imp-al','No categories detected — check file format.','wn',0);
+      } else {
+        toast(`${totalItems} items across ${totalCats} categories imported for ${CASINO_NAMES[casinoId]||casinoId}. Categories now appear in the sidebar.`,'ok','Import Successful 📂',7000);
+        sal('imp-al',`✓ Done — ${totalItems} items, ${totalCats} categories imported for ${CASINO_NAMES[casinoId]||casinoId}.`,'ok',8000);
+      }
+    }catch(err){hProg('imp');toast('Import failed: '+err.message,'er','Import Error',0);sal('imp-al','Error: '+err.message,'er',0);}
   };
   reader.readAsArrayBuffer(file);
 }
@@ -2938,8 +2944,10 @@ function importPriceListMaster(file){
       S.cA=0; S.cB=Math.min(1,newPeriods.length-1);
       dbSave();hProg('pl2');
       const n=Object.keys(newPeriods[0]?.data||{}).length;
-      sal('pl2-al',`✓ Price List imported: ${usePeriods.length} periods, ${n} items in current period. Draft Bid comparison updated.`,'ok');
-    }catch(err){hProg('pl2');sal('pl2-al','Error: '+err.message,'er',0);}
+      render();
+      toast(`${usePeriods.length} periods, ${n} items imported. Draft Bid comparison updated.`,'ok','Price List Imported 📋',7000);
+      sal('pl2-al',`✓ Price List imported: ${usePeriods.length} periods, ${n} items in current period. Draft Bid comparison updated.`,'ok',8000);
+    }catch(err){hProg('pl2');toast('Import failed: '+err.message,'er','Import Error',0);sal('pl2-al','Error: '+err.message,'er',0);}
   };
   reader.readAsArrayBuffer(file);
 }
