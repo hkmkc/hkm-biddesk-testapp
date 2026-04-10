@@ -2972,6 +2972,15 @@ function toggleNotifPanel(){
   _notifPanelOpen=!_notifPanelOpen;
   const p=document.getElementById('notif-panel');
   if(p)p.classList.toggle('open',_notifPanelOpen);
+  if(_notifPanelOpen){
+    // Mark all notifications as read and clear the badge
+    if(DB._notifs){
+      DB._notifs.forEach(n=>n.read=true);
+      dbSave();
+    }
+    const badge=document.getElementById('bell-badge');
+    if(badge){badge.textContent='0';badge.classList.remove('show');}
+  }
 }
 document.addEventListener('click',e=>{
   if(_notifPanelOpen&&!e.target.closest('#bell-wrap')){
