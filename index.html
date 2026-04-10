@@ -3906,30 +3906,40 @@ function rDash(){
   <div class="dash-wf-col">
     <div id="dash-al" class="al" style="margin-bottom:4px"></div>
     <div id="dash-results" class="dsearch-res" style="margin-bottom:10px"></div>
-    <div class="kpi-row" style="margin-bottom:12px">
-      <div class="kpi-card">
-        <div class="kpi-card-icon">🗓️</div>
-        <div class="kpi-card-val">${weeklyDue.length}</div>
-        <div class="kpi-card-lbl">Weekly Bids</div>
-        <div class="kpi-card-sub">${fmtCountdown(nextWeeklyMs)} to next</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div style="border:1.5px solid var(--navy);border-radius:10px;padding:8px 10px">
+        <div style="font-size:9px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px;text-align:center">Weekly Preview</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div class="kpi-card">
+            <div class="kpi-card-icon">🗓️</div>
+            <div class="kpi-card-val">${weeklyDue.length}</div>
+            <div class="kpi-card-lbl">Weekly Bids</div>
+            <div class="kpi-card-sub">${fmtCountdown(nextWeeklyMs)} to next</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-icon">🗓️</div>
+            <div class="kpi-card-val">${wkSubmitted}<span style="font-size:13px;color:var(--tx3)">/${weeklyDue.length}</span></div>
+            <div class="kpi-card-lbl">Weekly Done</div>
+            <div class="kpi-card-sub">${wkInProgress} in progress</div>
+          </div>
+        </div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-card-icon">📅</div>
-        <div class="kpi-card-val">${monthlyDue.length}</div>
-        <div class="kpi-card-lbl">Monthly Bids</div>
-        <div class="kpi-card-sub">${fmtCountdown(nextMonthlyMs)} to next</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-card-icon">🗓️</div>
-        <div class="kpi-card-val">${wkSubmitted}<span style="font-size:13px;color:var(--tx3)">/${weeklyDue.length}</span></div>
-        <div class="kpi-card-lbl">Weekly Done</div>
-        <div class="kpi-card-sub">${wkInProgress} in progress</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-card-icon">📅</div>
-        <div class="kpi-card-val">${mthSubmitted}<span style="font-size:13px;color:var(--tx3)">/${monthlyDue.length}</span></div>
-        <div class="kpi-card-lbl">Monthly Done</div>
-        <div class="kpi-card-sub">${mthInProgress} in progress</div>
+      <div style="border:1.5px solid var(--navy);border-radius:10px;padding:8px 10px">
+        <div style="font-size:9px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px;text-align:center">Monthly Preview</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div class="kpi-card">
+            <div class="kpi-card-icon">📅</div>
+            <div class="kpi-card-val">${monthlyDue.length}</div>
+            <div class="kpi-card-lbl">Monthly Bids</div>
+            <div class="kpi-card-sub">${fmtCountdown(nextMonthlyMs)} to next</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card-icon">📅</div>
+            <div class="kpi-card-val">${mthSubmitted}<span style="font-size:13px;color:var(--tx3)">/${monthlyDue.length}</span></div>
+            <div class="kpi-card-lbl">Monthly Done</div>
+            <div class="kpi-card-sub">${mthInProgress} in progress</div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="dash-section-hd" style="margin-top:0">
