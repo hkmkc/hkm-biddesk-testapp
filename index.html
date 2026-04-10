@@ -225,14 +225,17 @@ tr:hover .del-row{opacity:1}
 .dash-main-grid{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px}
 .dash-wf-col{flex:2;min-width:280px}
 .dash-side-col{flex:1;min-width:240px}
-.wf-preview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:4px}
-.wf-preview-card{background:#fff;border:1.5px solid var(--bd);border-radius:10px;padding:10px 12px;cursor:pointer;transition:.15s;box-shadow:var(--sh)}
-.wf-preview-card:hover{border-color:var(--navy);transform:translateY(-1px);box-shadow:0 4px 12px rgba(27,92,158,.12)}
-.wf-preview-name{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.wf-preview-badges{display:flex;gap:4px;margin-bottom:6px}
-.wf-preview-pct{font-size:20px;font-weight:800;color:var(--navy);line-height:1}
-.wf-preview-prog{background:var(--bg3);border-radius:3px;height:3px;margin-top:6px;overflow:hidden}
-.wf-preview-fill{height:3px;border-radius:3px;transition:.4s}
+.wf-boxes-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:4px}
+.wf-box{border:2px solid var(--navy);border-radius:10px;padding:12px 14px}
+.wf-box-title{font-size:12px;font-weight:800;color:var(--navy);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.wf-box-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--bg3);cursor:pointer;border-radius:4px;transition:.12s}
+.wf-box-item:last-child{border-bottom:none}
+.wf-box-item:hover{background:rgba(27,92,158,.06);padding-left:4px}
+.wf-box-name{font-size:12px;font-weight:600;color:var(--tx)}
+.wf-box-pct{font-size:12px;font-weight:800;color:var(--navy);white-space:nowrap}
+.wf-box-pct.done{color:var(--green)}
+.wf-box-prog{background:var(--bg3);border-radius:2px;height:3px;margin-top:2px;overflow:hidden;width:100%}
+.wf-box-fill{height:3px;border-radius:2px;transition:.4s}
 /* WF detail modal */
 .wf-modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:900;display:flex;align-items:center;justify-content:center;padding:16px}
 .wf-modal{background:#fff;border-radius:16px;padding:22px;max-width:460px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.22);max-height:90vh;overflow-y:auto}
@@ -3676,12 +3679,11 @@ function _rWfModalInner(casinoId,activeTab){
     <div style="margin-top:14px;font-size:10px;color:var(--tx3);text-align:center">Steps 1–2: click to toggle &nbsp;·&nbsp; Steps 3–5 follow bid status</div>`;
 }
 
-function openWfModal(casinoId){
+function openWfModal(casinoId, forceType){
   const dds=DUE_DATES.filter(d=>d.casino===casinoId);
   if(!dds.length)return;
-  const casinoName=dds[0].name.replace(/ (MTH|WK)$/,'');
-  // Determine default tab
-  const defaultTab=dds.find(d=>d.type==='weekly')?'weekly':'monthly';
+  const casinoName=dds[0].name.replace(/ (MTH|WK|Monthly|Weekly)$/i,'');
+  const defaultTab=forceType||(dds.find(d=>d.type==='weekly')?'weekly':'monthly');
   const inner=_rWfModalInner(casinoId,defaultTab);
   const ov=document.createElement('div');
   ov.className='wf-modal-ov';
@@ -3709,36 +3711,38 @@ function closeWfModal(){
   if(ov)ov.remove();
 }
 
-function rWfPreviewGrid(now){
-  // Group DUE_DATES by casino id
-  const byC={};
-  DUE_DATES.forEach(dd=>{
-    if(!byC[dd.casino])byC[dd.casino]=[];
-    byC[dd.casino].push(dd);
-  });
-  const sorted=Object.entries(byC).sort((a,b)=>{
-    const nameA=a[1][0].name.replace(/ (MTH|WK)$/,'');
-    const nameB=b[1][0].name.replace(/ (MTH|WK)$/,'');
-    return nameA.localeCompare(nameB);
-  });
-  return`<div class="wf-preview-grid">${sorted.map(([cid,dds])=>{
-    const casinoName=dds[0].name.replace(/ (MTH|WK)$/,'');
-    // Combined % across all entries for this casino
-    const total=dds.reduce((s,dd)=>s+_wfPct(dd.id),0);
-    const pct=Math.round(total/dds.length);
-    const hasW=dds.some(d=>d.type==='weekly');
-    const hasM=dds.some(d=>d.type==='monthly');
-    const pctCol=pct===100?'var(--green)':pct>0?'var(--navy)':'var(--bd2)';
-    const badges=(hasW?'<span style="background:#e0eeff;color:var(--navy);font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px">WK</span>':'')+
-                 (hasM?'<span style="background:#fef3c7;color:#92400e;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px">MTH</span>':'');
-    return`<div class="wf-preview-card" onclick="openWfModal('${cid}')">
-      <div class="wf-preview-name">${casinoName}</div>
-      <div class="wf-preview-badges">${badges}</div>
-      <div class="wf-preview-pct" style="color:${pctCol}">${pct}%</div>
-      <div style="font-size:9px;color:var(--tx3);margin-top:2px">done</div>
-      <div class="wf-preview-prog"><div class="wf-preview-fill" style="width:${pct}%;background:${pctCol}"></div></div>
+function rWfBoxes(){
+  const weekly=DUE_DATES.filter(d=>d.type==='weekly').sort((a,b)=>a.name.localeCompare(b.name));
+  const monthly=DUE_DATES.filter(d=>d.type==='monthly').sort((a,b)=>a.name.localeCompare(b.name));
+  const rItem=(dd)=>{
+    const pct=_wfPct(dd.id);
+    const isDone=pct===100;
+    const pctCol=isDone?'var(--green)':'var(--navy)';
+    const displayName=dd.name.replace(/ (MTH|WK|Monthly|Weekly)$/i,'');
+    return`<div class="wf-box-item" onclick="openWfModal('${dd.casino}','${dd.type}')">
+      <div style="flex:1;min-width:0">
+        <div class="wf-box-name">${displayName}</div>
+        <div class="wf-box-prog"><div class="wf-box-fill" style="width:${pct}%;background:${pctCol}"></div></div>
+      </div>
+      <div class="wf-box-pct${isDone?' done':''}">${pct}%</div>
     </div>`;
-  }).join('')}</div>`;
+  };
+  return`<div class="wf-boxes-row">
+    <div class="wf-box">
+      <div class="wf-box-title">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--navy)"></span>
+        Weekly Bids
+      </div>
+      ${weekly.map(rItem).join('')}
+    </div>
+    <div class="wf-box">
+      <div class="wf-box-title">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gold2)"></span>
+        Monthly Bids
+      </div>
+      ${monthly.map(rItem).join('')}
+    </div>
+  </div>`;
 }
 
 function rDashCal(now){
@@ -3912,8 +3916,8 @@ function rDash(){
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       Bidding Workflow Tracker
     </div>
-    <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Click a casino card to view & update workflow steps</div>
-    ${rWfPreviewGrid(now)}
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Click a casino to view & update workflow steps</div>
+    ${rWfBoxes()}
   </div>
   <div class="dash-side-col">
     <div class="dash-section-hd" style="margin-top:0">
