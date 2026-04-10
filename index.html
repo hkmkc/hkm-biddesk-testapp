@@ -3988,16 +3988,13 @@ function _getBidValidThru(cid, weekly){
     const isUrgent=msToSat<86400000; // less than 1 day to end of week
     return{label,isCurrent:true,isUrgent,isExpired:false};
   } else {
-    // Monthly: show the due date for the current month's bid
-    const dd=DUE_DATES.find(d=>d.casino===cid&&d.type==='monthly');
-    if(!dd)return{label:'—',isCurrent:false,isUrgent:false,isExpired:false};
-    const next=getNextDue(dd);
-    const ms=next-now;
-    const dateStr=next.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',month:'short',day:'numeric',year:'numeric'});
-    const isCurrent=ms>0;
-    const isUrgent=ms>0&&ms<86400000;
-    const isExpired=ms<=0;
-    return{label:dateStr,isCurrent,isUrgent,isExpired,ms};
+    // Monthly: effective for the entire current month (Apr 1 – Apr 30)
+    const y=now.getFullYear(), mo=now.getMonth();
+    const lastDay=new Date(y,mo+1,0); // last day of current month
+    const firstFmt=new Date(y,mo,1).toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',month:'short',day:'numeric'});
+    const lastFmt=lastDay.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',month:'short',day:'numeric',year:'numeric'});
+    const label=`${firstFmt} – ${lastFmt}`;
+    return{label,isCurrent:true,isUrgent:false,isExpired:false};
   }
 }
 
