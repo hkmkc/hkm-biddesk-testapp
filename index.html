@@ -2842,16 +2842,18 @@ function rFltBar(scope,rightSlot=''){
     ${rightSlot?`<div style="margin-left:auto">${rightSlot}</div>`:''}
   </div>`;
 }
-function _rExpBtn(){
-  return`<div style="position:relative;display:inline-block">
-    <button class="btn-act" style="white-space:nowrap" onclick="event.stopPropagation();var p=this.nextElementSibling;var o=p.style.display==='block';p.style.display=o?'none':'block';if(!o){var h=function(e){if(!p.contains(e.target)&&e.target!==this){p.style.display='none';document.removeEventListener('click',h);}}.bind(this);setTimeout(function(){document.addEventListener('click',h);},10);}">
+function _rExpBtn(id='exp-dd-tab'){
+  const _ico=(p)=>`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  const _fileIco=`<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>`;
+  return`<div class="an-exp-wrap">
+    <button class="btn-act" onclick="toggleExpDd(event,'${id}')">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:3px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       EXPORT ▾
     </button>
-    <div style="display:none;position:absolute;right:0;top:calc(100% + 5px);background:#fff;border:1.5px solid #93c5fd;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.13);z-index:9999;min-width:140px;overflow:hidden">
-      <div class="an-exp-dd-item" onclick="downloadTab('csv')">Export as CSV</div>
-      <div class="an-exp-dd-item" onclick="downloadTab('xlsx')">Export as Excel</div>
-      <div class="an-exp-dd-item" onclick="downloadTab('pdf')">Export as PDF</div>
+    <div id="${id}" class="an-exp-dd" style="display:none">
+      <div class="an-exp-dd-item" onclick="downloadTab('csv')">${_ico(_fileIco)} Export as CSV</div>
+      <div class="an-exp-dd-item" onclick="downloadTab('xlsx')">${_ico(_fileIco+'<line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/>')} Export as Excel</div>
+      <div class="an-exp-dd-item" onclick="downloadTab('pdf')">${_ico(_fileIco)} Export as PDF</div>
     </div>
   </div>`;
 }
@@ -3361,7 +3363,17 @@ function rAnalyticsDetail(){
       <div style="font-size:11px;color:${segColors[segment]};font-weight:600;margin-top:2px">${segSubs[segment]}</div>
     </div>
   </div>
-  <button class="btn" onclick="exportAnalyticsDetail('${cid}','${period}','${segment}')" style="font-size:12px;padding:6px 14px">⬇ Export CSV</button>
+  <div class="an-exp-wrap">
+    <button class="btn-act" onclick="toggleExpDd(event,'exp-dd-detail')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:3px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      EXPORT ▾
+    </button>
+    <div id="exp-dd-detail" class="an-exp-dd" style="display:none">
+      <div class="an-exp-dd-item" onclick="exportAnalyticsDetail('${cid}','${period}','${segment}','csv')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Export as CSV</div>
+      <div class="an-exp-dd-item" onclick="exportAnalyticsDetail('${cid}','${period}','${segment}','xlsx')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg> Export as Excel</div>
+      <div class="an-exp-dd-item" onclick="exportAnalyticsDetail('${cid}','${period}','${segment}','pdf')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Export as PDF</div>
+    </div>
+  </div>
 </div>
 </div>
 <div style="margin-bottom:14px"></div>
@@ -3383,7 +3395,9 @@ ${items.length===0
 </table></div>`}`;
 }
 
-function exportAnalyticsDetail(cid,period,segment){
+function exportAnalyticsDetail(cid,period,segment,fmt='csv'){
+  const dd=document.getElementById('exp-dd-detail');
+  if(dd)dd.style.display='none';
   const result=calcCasinoAnalytics(cid);
   if(!result)return;
   const items=result[period][segment]||[];
@@ -3396,12 +3410,26 @@ function exportAnalyticsDetail(cid,period,segment){
     const priceStr=it.lpPrice!=null?parseFloat(it.lpPrice).toFixed(2):'';
     rows.push([casino.name,period,segLabels[segment],it.hkm||'',it.item,it.desc||'',it.unit||'',it.cat,lpStr,priceStr,dayStr]);
   });
-  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const a=document.createElement('a');
-  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
-  a.download=`analytics_${casino.id}_${period}_${segment}_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  toast('Item list exported to CSV.','ok','Export Complete ⬇',4000);
+  const fname=`analytics_${casino.id}_${period}_${segment}_${new Date().toISOString().slice(0,10)}`;
+  if(fmt==='xlsx'&&window.XLSX){
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Analytics Detail');
+    XLSX.writeFile(wb,fname+'.xlsx');
+    toast('Exported as Excel.','ok','Export Complete ⬇',4000);
+  }else if(fmt==='pdf'){
+    const w=window.open('','_blank');
+    if(!w)return;
+    const tbl=rows.map((r,i)=>`<tr>${r.map(c=>`<${i?'td':'th'}>${c}</${i?'td':'th'}>`).join('')}</tr>`).join('');
+    w.document.write(`<!DOCTYPE html><html><head><title>${fname}</title><style>body{font-family:sans-serif;font-size:11px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:4px 6px}th{background:#1B5C9E;color:#fff}</style></head><body><h3>${segLabels[segment]} Items — ${casino.name} ${period}</h3><table>${tbl}</table></body></html>`);
+    w.document.close();w.print();
+    toast('PDF print dialog opened.','ok','Export PDF ⬇',4000);
+  }else{
+    const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const a=document.createElement('a');
+    a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+    a.download=fname+'.csv';a.click();
+    toast('Exported as CSV.','ok','Export Complete ⬇',4000);
+  }
 }
 
 function recalcAnalytics(){
@@ -3428,17 +3456,20 @@ function recalcAnalytics(){
   render();
 }
 
-function toggleAnExpDd(evt,cid){
+function toggleExpDd(evt,id){
   evt.stopPropagation();
-  const dd=document.getElementById('an-exp-dd');
+  const dd=document.getElementById(id);
   if(!dd)return;
   const isOpen=dd.style.display==='block';
-  dd.style.display=isOpen?'none':'block';
+  // close all export dropdowns first
+  document.querySelectorAll('.an-exp-dd').forEach(d=>d.style.display='none');
   if(!isOpen){
+    dd.style.display='block';
     const close=e=>{if(!dd.contains(e.target)){dd.style.display='none';document.removeEventListener('click',close);}};
     setTimeout(()=>document.addEventListener('click',close),10);
   }
 }
+function toggleAnExpDd(evt,cid){toggleExpDd(evt,'an-exp-dd');}
 
 function exportAnalytics(cid,fmt='csv'){
   const dd=document.getElementById('an-exp-dd');
