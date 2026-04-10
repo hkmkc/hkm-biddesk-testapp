@@ -3863,10 +3863,10 @@ function rDash(){
   const allDue=DUE_DATES;
   const weeklyDue=allDue.filter(dd=>dd.type==='weekly').sort((a,b)=>getNextDue(a)-getNextDue(b));
   const monthlyDue=allDue.filter(dd=>dd.type==='monthly').sort((a,b)=>getNextDue(a)-getNextDue(b));
-  const wkSubmitted=weeklyDue.filter(dd=>['submitted','admin'].includes(getBidStatus(dd.id))).length;
-  const wkInProgress=weeklyDue.filter(dd=>getBidStatus(dd.id)==='working').length;
-  const mthSubmitted=monthlyDue.filter(dd=>['submitted','admin'].includes(getBidStatus(dd.id))).length;
-  const mthInProgress=monthlyDue.filter(dd=>getBidStatus(dd.id)==='working').length;
+  const wkSubmitted=weeklyDue.filter(dd=>_wfPct(dd.id)===100).length;
+  const wkInProgress=weeklyDue.filter(dd=>{const p=_wfPct(dd.id);return p>0&&p<100;}).length;
+  const mthSubmitted=monthlyDue.filter(dd=>_wfPct(dd.id)===100).length;
+  const mthInProgress=monthlyDue.filter(dd=>{const p=_wfPct(dd.id);return p>0&&p<100;}).length;
   const allSorted=[...allDue].sort((a,b)=>getNextDue(a)-getNextDue(b));
   const _dateStr=now.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',weekday:'long',month:'long',day:'numeric',year:'numeric'});
   const _timeStr=now.toLocaleTimeString('en-US',{timeZone:'America/Los_Angeles',hour:'2-digit',minute:'2-digit'})+' PST';
