@@ -3917,6 +3917,22 @@ function rDash(){
     </div>
     <div style="font-size:11px;color:var(--tx3);margin-bottom:10px">Click a casino to view & update workflow steps</div>
     ${rWfBoxes()}
+    <div class="dash-section-hd" style="margin-top:14px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Casino Bid Overview
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,130px));gap:8px">
+      ${[...DB.casinos].sort((a,b)=>a.name.localeCompare(b.name)).map(casino=>{
+        const totalItems=(casino.cats||[]).reduce((n,cat)=>n+gI(casino.id,cat).length,0);
+        const pricedItems=(casino.cats||[]).reduce((n,cat)=>n+gI(casino.id,cat).filter(it=>getLastBid(casino.id,cat,it.item)!=null).length,0);
+        const pct=totalItems?Math.round(pricedItems/totalItems*100):0;
+        return`<div onclick="nav('bidoverview',{ovCasino:${JSON.stringify(casino).replace(/"/g,"'")}})" style="background:#fff;border:1.5px solid var(--bd2);border-radius:8px;padding:8px 10px;width:130px;box-sizing:border-box;cursor:pointer;transition:.15s;box-shadow:var(--sh)" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--bd2)'">
+          <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${casino.name}</div>
+          <div style="font-size:9px;color:var(--tx3);margin-bottom:5px">${(casino.cats||[]).length} cat · ${pricedItems}/${totalItems}</div>
+          <div style="background:var(--bg3);border-radius:2px;height:3px;overflow:hidden"><div style="background:var(--navy);height:3px;width:${pct}%"></div></div>
+        </div>`;
+      }).join('')}
+    </div>
   </div>
   <div class="dash-side-col">
     <div class="dash-section-hd" style="margin-top:0">
@@ -3949,42 +3965,8 @@ function rDash(){
         </div>`;
       }).join('')}
     </div>
-    ${!DB._isAdmin?`
-    <div class="dash-section-hd" style="margin-top:18px">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-      Casino Bid Overview
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:10px">
-      ${[...DB.casinos].sort((a,b)=>a.name.localeCompare(b.name)).map(casino=>{
-        const totalItems=(casino.cats||[]).reduce((n,cat)=>n+gI(casino.id,cat).length,0);
-        const pricedItems=(casino.cats||[]).reduce((n,cat)=>n+gI(casino.id,cat).filter(it=>getLastBid(casino.id,cat,it.item)!=null).length,0);
-        return`<div onclick="nav('bidoverview',{ovCasino:${JSON.stringify(casino).replace(/"/g,"'")}})" style="background:#fff;border:1.5px solid var(--bd2);border-radius:10px;padding:14px 16px;min-width:180px;flex:1;cursor:pointer;transition:.15s;box-shadow:var(--sh)" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--bd2)'">
-          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:3px">${casino.name}</div>
-          <div style="font-size:10px;color:var(--tx3);margin-bottom:6px">${(casino.cats||[]).length} categories</div>
-          <div style="font-size:11px;color:var(--tx2)">${pricedItems}/${totalItems} priced</div>
-        </div>`;
-      }).join('')}
-    </div>`:``}
   </div>
 </div>
-
-${DB._isAdmin?`
-<div class="dash-section-hd">
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-  Casino Bid Overview
-</div>
-<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px">
-  ${[...DB.casinos].sort((a,b)=>a.name.localeCompare(b.name)).map(casino=>{
-    const totalItems=(casino.cats||[]).reduce((n,cat)=>n+gI(casino.id,cat).length,0);
-    const pricedItems=(casino.cats||[]).reduce((n,cat)=>n+gI(casino.id,cat).filter(it=>getLastBid(casino.id,cat,it.item)!=null).length,0);
-    return`<div onclick="nav('bidoverview',{ovCasino:${JSON.stringify(casino).replace(/"/g,"'")}})" style="background:#fff;border:1.5px solid var(--bd2);border-radius:10px;padding:14px 18px;min-width:180px;flex:1;cursor:pointer;transition:.15s;box-shadow:var(--sh)" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--bd2)'">
-      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:3px">${casino.name}</div>
-      <div style="font-size:10px;color:var(--tx3);margin-bottom:8px">${(casino.cats||[]).length} categories</div>
-      <div style="background:var(--bg3);border-radius:3px;height:4px;margin-bottom:4px;overflow:hidden"><div style="background:var(--navy);height:4px;width:${totalItems?Math.round(pricedItems/totalItems*100):0}%"></div></div>
-      <div style="font-size:10px;color:var(--tx2)">${pricedItems}/${totalItems} items priced</div>
-    </div>`;
-  }).join('')}
-</div>`:''}
 `;
 }
 function dashSearch(){
