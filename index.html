@@ -204,7 +204,18 @@ tr:hover .del-row{opacity:1}
 .ddcard-time{font-size:11px;color:var(--tx2)}
 .ddcard-cnt{font-size:12px;font-weight:700;margin-top:4px}
 /* ── Dashboard search ── */
-.dsearch{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:12px;margin-bottom:14px}
+/* ── Dashboard ── */
+.dash-sticky{position:sticky;top:0;z-index:30;background:#fff;padding-bottom:10px;margin-bottom:16px;border-bottom:2px solid var(--gold)}
+.dash-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:2px 0 10px;flex-wrap:wrap}
+.dash-title{font-size:26px;font-weight:800;color:var(--navy);line-height:1;letter-spacing:-.3px}
+.dash-sub{font-size:11px;color:var(--tx3);margin-top:3px;font-weight:500}
+.dash-meta{text-align:right;flex-shrink:0}
+.dash-meta-date{font-size:14px;font-weight:700;color:var(--tx2)}
+.dash-meta-time{font-size:12px;color:var(--tx3);margin-top:2px}
+.dash-search{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;padding:12px 16px}
+.dash-search-grp{display:flex;flex-direction:column;gap:3px}
+.dash-section-hd{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--navy);margin-bottom:10px;margin-top:20px;padding-bottom:6px;border-bottom:2px solid var(--bg3)}
+.dash-section-hd:first-of-type{margin-top:4px}
 .dsearch-res .tw{max-height:400px;overflow-y:auto}
 /* ── Bid Overview ── */
 .ov-badge{display:inline-block;background:var(--gold);color:var(--navy);border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:5px}
@@ -3569,32 +3580,51 @@ function rDash(){
   const weekly=DUE_DATES.filter(d=>d.type==='weekly').slice().sort((a,b)=>getNextDue(a)-getNextDue(b));
   const monthly=DUE_DATES.filter(d=>d.type==='monthly').slice().sort((a,b)=>getNextDue(a)-getNextDue(b));
 
+  const _dateStr=now.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  const _timeStr=now.toLocaleTimeString('en-US',{timeZone:'America/Los_Angeles',hour:'2-digit',minute:'2-digit'})+' PST';
+  const _userStr=DB._currentUser?(DB._isAdmin?'👤 Admin':'👤 '+DB._currentUser.name):'';
   return`
-<div style="margin-bottom:18px">
-  <div style="font-size:20px;font-weight:800;color:var(--navy);margin-bottom:2px">Dashboard</div>
-  <div style="font-size:12px;color:var(--tx2)">Las Vegas / PST &nbsp;·&nbsp; ${now.toLocaleString('en-US',{timeZone:'America/Los_Angeles',weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}${DB._currentUser?` &nbsp;·&nbsp; <span style="color:var(--tx3)">${DB._isAdmin?'👤 Admin':'👤 '+DB._currentUser.name}</span>`:''}</div>
-</div>
-
-<div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:10px">🔍 Bid Overview Search</div>
-<div class="dsearch" style="margin-bottom:4px">
-  <div><div class="fl">Casino</div><select id="dash-casino" style="min-width:180px">${casinoOpts}</select></div>
-  <div><div class="fl">Item # or HKM Code</div><input type="text" id="dash-q" placeholder="e.g. F13000010 or GEQUZ" style="min-width:200px" onkeydown="if(event.key==='Enter')dashSearch()"></div>
-  <button class="btn btn-nv" onclick="dashSearch()">Search</button>
-  <button class="btn" onclick="dashSearchAll()">Show All</button>
+<div class="dash-sticky">
+  <div class="dash-hdr">
+    <div>
+      <div class="dash-title">Dashboard</div>
+      <div class="dash-sub">HKM BidDesk &nbsp;·&nbsp; Hong Kong Market</div>
+    </div>
+    <div class="dash-meta">
+      <div class="dash-meta-date">${_dateStr}</div>
+      <div class="dash-meta-time">${_timeStr}${_userStr?'&nbsp;&nbsp;·&nbsp;&nbsp;'+_userStr:''}</div>
+    </div>
+  </div>
+  <div class="dash-search">
+    <div class="dash-search-grp">
+      <div class="fl" style="margin:0 0 3px">Casino</div>
+      <select id="dash-casino" style="min-width:200px">${casinoOpts}</select>
+    </div>
+    <div class="dash-search-grp" style="flex:1;min-width:200px">
+      <div class="fl" style="margin:0 0 3px">Item # or HKM Code</div>
+      <input type="text" id="dash-q" placeholder="Search by item number or HKM code…" style="width:100%" onkeydown="if(event.key==='Enter')dashSearch()">
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end">
+      <button class="btn btn-nv" onclick="dashSearch()" style="padding:7px 18px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Search
+      </button>
+      <button class="btn" onclick="dashSearchAll()" style="padding:7px 14px">Show All</button>
+    </div>
+  </div>
 </div>
 <div id="dash-al" class="al" style="margin-bottom:6px"></div>
 <div id="dash-results" class="dsearch-res" style="margin-bottom:20px"></div>
 
 ${DB._isAdmin ? `
-<div style="border-top:1px solid var(--bd);padding-top:16px">
-  <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:8px">📅 Weekly Bids</div>
+<div>
+  <div class="dash-section-hd"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Weekly Bids</div>
   <div class="dd-table-wrap">
     <table class="dd-table">
       <colgroup><col style="width:16%"><col style="width:20%"><col style="width:14%"><col style="width:14%"><col style="width:12%"><col style="width:24%"></colgroup>
       <thead><tr><th>Casino</th><th>Schedule</th><th>Time (PST)</th><th>Due Date</th><th>Countdown</th><th>Status</th></tr></thead>
       <tbody>${weekly.map(dd=>ddRow(dd)).join('')}</tbody></table>
   </div>
-  <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:8px;margin-top:18px">📅 Monthly Bids</div>
+  <div class="dash-section-hd"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Monthly Bids</div>
   <div class="dd-table-wrap">
     <table class="dd-table">
       <colgroup><col style="width:16%"><col style="width:20%"><col style="width:14%"><col style="width:14%"><col style="width:12%"><col style="width:24%"></colgroup>
@@ -3602,8 +3632,8 @@ ${DB._isAdmin ? `
       <tbody>${monthly.map(dd=>ddRow(dd)).join('')}</tbody></table>
   </div>
 </div>` : `
-<div style="border-top:1px solid var(--bd);padding-top:16px">
-  <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:14px">🏨 Casino Bid Overview</div>
+<div>
+  <div class="dash-section-hd"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Casino Bid Overview</div>
   <div style="display:flex;flex-wrap:wrap;gap:12px">
     ${[...DB.casinos].sort((a,b)=>a.name.localeCompare(b.name)).map(casino=>{
       const totalItems=((casino.cats||[]).reduce((n,cat)=>n+gI(casino.id,cat).length,0));
