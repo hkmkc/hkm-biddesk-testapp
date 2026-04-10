@@ -3622,11 +3622,7 @@ function toggleWfStep(ddId,step){
 
 function _wfPct(ddId){
   const wf=(DB.wf||{})[ddId]||{};
-  const bs=getBidStatus(ddId);
-  const done=[!!wf.qbe,!!wf.upload,
-    ['working','pending','submitted','admin'].includes(bs),
-    ['pending','submitted','admin'].includes(bs),
-    ['submitted','admin'].includes(bs)];
+  const done=[!!wf.qbe,!!wf.upload,!!wf.working,!!wf.review,!!wf.final];
   return Math.round(done.filter(Boolean).length/5*100);
 }
 
@@ -3636,20 +3632,15 @@ function _rWfModalInner(casinoId,activeTab){
   const dd=dds.find(d=>d.type===activeTab)||dds[0];
   if(!dd)return'<div style="color:var(--tx3);font-size:13px">No bid schedule found.</div>';
   const wf=(DB.wf||{})[dd.id]||{};
-  const bs=getBidStatus(dd.id);
-  const s3=['working','pending','submitted','admin'].includes(bs);
-  const s4=['pending','submitted','admin'].includes(bs);
-  const s5=['submitted','admin'].includes(bs);
-  const done=[!!wf.qbe,!!wf.upload,s3,s4,s5];
+  const done=[!!wf.qbe,!!wf.upload,!!wf.working,!!wf.review,!!wf.final];
   const pct=Math.round(done.filter(Boolean).length/5*100);
   const activeIdx=done.findIndex(d=>!d);
   const labels=['Get QBE Reports','Upload to App','Working on Bids','Manager Review','Final Submit'];
-  const ids=['qbe','upload',null,null,null];
-  const isClickable=[true,true,false,false,false];
+  const ids=['qbe','upload','working','review','final'];
   const now=getPST();
   const next=getNextDue(dd);
   const ms=next-now;
-  const isDone=s5;
+  const isDone=!!wf.final;
   const tabsHtml=hasBoth?`<div class="wf-modal-tabs">
     <button class="wf-modal-tab${activeTab==='weekly'?' on':''}" onclick="setWfModalTab('${casinoId}','weekly')">📆 Weekly</button>
     <button class="wf-modal-tab${activeTab==='monthly'?' on':''}" onclick="setWfModalTab('${casinoId}','monthly')">📅 Monthly</button>
@@ -3657,10 +3648,8 @@ function _rWfModalInner(casinoId,activeTab){
   const stepsHtml=done.map((isDoneStep,i)=>{
     const isActive=i===activeIdx;
     const status=isDoneStep?'done':isActive?'active':'pending';
-    const canClick=isClickable[i];
-    const clickAttr=canClick?`onclick="toggleWfStep('${dd.id}','${ids[i]}')" title="Click to toggle"`:'';
-    return`<div class="wf-step ${status}${canClick?' clickable':''}">
-      <div class="wf-step-dot" ${clickAttr}>${isDoneStep?'✓':(i+1)}</div>
+    return`<div class="wf-step ${status} clickable">
+      <div class="wf-step-dot" onclick="toggleWfStep('${dd.id}','${ids[i]}')" title="${labels[i]} — click to toggle">${isDoneStep?'✓':(i+1)}</div>
       <div class="wf-step-lbl">${labels[i]}</div>
     </div>`;
   }).join('');
@@ -3676,7 +3665,7 @@ function _rWfModalInner(casinoId,activeTab){
       <span>${fmtCountdown(ms)}</span>
     </div>
     <div class="wf-steps-row">${stepsHtml}</div>
-    <div style="margin-top:14px;font-size:10px;color:var(--tx3);text-align:center">Steps 1–2: click to toggle &nbsp;·&nbsp; Steps 3–5 follow bid status</div>`;
+    <div style="margin-top:14px;font-size:10px;color:var(--tx3);text-align:center">Click any step to mark done or undo</div>`;
 }
 
 function openWfModal(casinoId, forceType){
