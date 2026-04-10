@@ -873,40 +873,57 @@ function sbToggle(cid){
   DB._openC[cid]=!DB._openC[cid];
   rSB();
 }
-function sbRenameCasino(e,cid){
-  e.preventDefault();
-  const casino=DB.casinos.find(c=>c.id===cid);
-  if(!casino)return;
-  const val=prompt('Rename casino:',casino.name);
-  if(val&&val.trim()){casino.name=val.trim();dbSave();rSB();}
-}
 function sbCtxCasino(e,cid){
   e.preventDefault();
   const casino=DB.casinos.find(c=>c.id===cid);
   if(!casino)return;
-  const act=prompt(`Casino: ${casino.name}\nType: rename / delete`,'rename');
-  if(!act)return;
-  if(act.trim().toLowerCase()==='rename'){sbRenameCasino(e,cid);}
-  else if(act.trim().toLowerCase()==='delete'){
-    if(confirm(`Delete ${casino.name} and ALL its data? This cannot be undone.`)){
-      DB.casinos=DB.casinos.filter(c=>c.id!==cid);
-      Object.keys(DB.items).filter(k=>k.startsWith(cid+'|')).forEach(k=>{delete DB.items[k];delete DB.impBH[k];});
-      if(DB._openC)delete DB._openC[cid];
-      if(S.casino&&S.casino.id===cid){S.casino=null;S.cat=null;S.view='dashboard';}
-      dbSave();render();
-    }
-  }
+  showSbCtxMenu(e,'casino',cid,'',casino.name);
 }
 function sbRenameCat(e,cid,cat){
   e.preventDefault();
-  const casino=DB.casinos.find(c=>c.id===cid);
-  if(!casino)return;
-  const act=prompt(`Category: ${cat}\nType: rename / delete`,'rename');
-  if(!act)return;
-  if(act.trim().toLowerCase()==='rename'){
-    const val=prompt('New name:',cat);
-    if(!val||!val.trim())return;
-    const newCat=val.trim();
+  showSbCtxMenu(e,'cat',cid,cat,cat);
+}
+function showSbCtxMenu(e,type,cid,cat,name){
+  const menu=document.getElementById('sb-ctx-menu');
+  if(!menu)return;
+  menu.dataset.type=type;
+  menu.dataset.cid=cid;
+  menu.dataset.cat=cat;
+  menu.dataset.name=name;
+  menu.style.display='block';
+  const x=Math.min(e.clientX,window.innerWidth-170);
+  const y=Math.min(e.clientY,window.innerHeight-100);
+  menu.style.left=x+'px';
+  menu.style.top=y+'px';
+}
+function _closeSbCtxMenu(){
+  const m=document.getElementById('sb-ctx-menu');
+  if(m)m.style.display='none';
+}
+function openSbRenameModal(){
+  const menu=document.getElementById('sb-ctx-menu');
+  const type=menu.dataset.type,cid=menu.dataset.cid,cat=menu.dataset.cat,name=menu.dataset.name;
+  _closeSbCtxMenu();
+  const modal=document.getElementById('sb-rename-modal');
+  modal.dataset.type=type;modal.dataset.cid=cid;modal.dataset.cat=cat;
+  document.getElementById('sb-rename-title').textContent=type==='casino'?'Rename Casino':'Rename Category';
+  document.getElementById('sb-rename-input').value=name;
+  document.getElementById('sb-rename-err').textContent='';
+  modal.style.display='flex';
+  setTimeout(()=>{const inp=document.getElementById('sb-rename-input');inp.focus();inp.select();},100);
+}
+function confirmSbRename(){
+  const modal=document.getElementById('sb-rename-modal');
+  const type=modal.dataset.type,cid=modal.dataset.cid,cat=modal.dataset.cat;
+  const val=(document.getElementById('sb-rename-input').value||'').trim();
+  if(!val){document.getElementById('sb-rename-err').textContent='Name cannot be empty.';return;}
+  if(type==='casino'){
+    const casino=DB.casinos.find(c=>c.id===cid);
+    if(casino){casino.name=val;dbSave();render();}
+  } else {
+    const casino=DB.casinos.find(c=>c.id===cid);
+    if(!casino)return;
+    const newCat=val;
     const idx=casino.cats.indexOf(cat);
     if(idx>-1)casino.cats[idx]=newCat;
     const oldKey=cid+'|'+cat,newKey=cid+'|'+newCat;
@@ -914,16 +931,47 @@ function sbRenameCat(e,cid,cat){
     if(DB.impBH&&DB.impBH[oldKey]){DB.impBH[newKey]=DB.impBH[oldKey];delete DB.impBH[oldKey];}
     if(S.cat===cat)S.cat=newCat;
     dbSave();render();
-  } else if(act.trim().toLowerCase()==='delete'){
-    if(confirm(`Delete ${cat} and all its data?`)){
+  }
+  document.getElementById('sb-rename-modal').style.display='none';
+}
+function closeSbRenameModal(){document.getElementById('sb-rename-modal').style.display='none';}
+function openSbDeleteModal(){
+  const menu=document.getElementById('sb-ctx-menu');
+  const type=menu.dataset.type,cid=menu.dataset.cid,cat=menu.dataset.cat,name=menu.dataset.name;
+  _closeSbCtxMenu();
+  const modal=document.getElementById('sb-delete-modal');
+  modal.dataset.type=type;modal.dataset.cid=cid;modal.dataset.cat=cat;
+  const label=type==='casino'?`Casino: ${name}`:`Category: ${name}`;
+  document.getElementById('sb-delete-lbl').textContent=label;
+  document.getElementById('sb-delete-input').value='';
+  document.getElementById('sb-delete-err').textContent='';
+  modal.style.display='flex';
+  setTimeout(()=>document.getElementById('sb-delete-input').focus(),100);
+}
+function confirmSbDelete(){
+  const val=(document.getElementById('sb-delete-input').value||'').trim().toLowerCase();
+  if(val!=='delete'){document.getElementById('sb-delete-err').textContent='Type "delete" exactly to confirm.';return;}
+  const modal=document.getElementById('sb-delete-modal');
+  const type=modal.dataset.type,cid=modal.dataset.cid,cat=modal.dataset.cat;
+  modal.style.display='none';
+  if(type==='casino'){
+    DB.casinos=DB.casinos.filter(c=>c.id!==cid);
+    Object.keys(DB.items).filter(k=>k.startsWith(cid+'|')).forEach(k=>{delete DB.items[k];if(DB.impBH)delete DB.impBH[k];});
+    if(DB._openC)delete DB._openC[cid];
+    if(S.casino&&S.casino.id===cid){S.casino=null;S.cat=null;S.view='dashboard';}
+    dbSave();render();
+  } else {
+    const casino=DB.casinos.find(c=>c.id===cid);
+    if(casino){
       casino.cats=casino.cats.filter(c=>c!==cat);
       const k=cid+'|'+cat;
-      delete DB.items[k];delete DB.impBH[k];
+      delete DB.items[k];if(DB.impBH)delete DB.impBH[k];
       if(S.cat===cat){S.cat=null;S.view='casino';}
       dbSave();render();
     }
   }
 }
+function closeSbDeleteModal(){document.getElementById('sb-delete-modal').style.display='none';}
 function rBC(){
   document.getElementById('bc').innerHTML='';
 }
@@ -4817,8 +4865,8 @@ function migrateLocalUsers(){
 // Auth runs after DOM is ready
 window.addEventListener('DOMContentLoaded',function(){
   if(checkAuth()){restoreFromHash();render();startAlerts();updateMenuForRole();setTimeout(()=>{pruneOldData();initColResize();},800);}
-  document.addEventListener('click',function(){_closePeriodCtxMenu();});
-  document.addEventListener('keydown',function(e){if(e.key==='Escape'){_closePeriodCtxMenu();closePeriodDelModal();}});
+  document.addEventListener('click',function(){_closePeriodCtxMenu();_closeSbCtxMenu();});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){_closePeriodCtxMenu();closePeriodDelModal();_closeSbCtxMenu();closeSbRenameModal();closeSbDeleteModal();}});
 });
 window.addEventListener('hashchange',function(){
   if(checkAuth()){restoreFromHash();render();}
@@ -4885,6 +4933,49 @@ window.addEventListener('hashchange',function(){
   </div>
 </div>
 
+
+<!-- SIDEBAR CASINO/CATEGORY RIGHT-CLICK CONTEXT MENU -->
+<div id="sb-ctx-menu" style="display:none;position:fixed;z-index:3000;background:#fff;border:1.5px solid var(--bd2);border-radius:9px;box-shadow:0 6px 24px rgba(0,0,0,.15);min-width:160px;overflow:hidden">
+  <div style="padding:6px 0">
+    <div onclick="openSbRenameModal()" style="padding:9px 16px;font-size:13px;font-weight:600;color:var(--navy);cursor:pointer;display:flex;align-items:center;gap:8px;transition:.12s" onmouseover="this.style.background='#f0f5ff'" onmouseout="this.style.background=''">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Rename
+    </div>
+    <div onclick="openSbDeleteModal()" style="padding:9px 16px;font-size:13px;font-weight:600;color:#c0392b;cursor:pointer;display:flex;align-items:center;gap:8px;border-top:1px solid var(--bg3);transition:.12s" onmouseover="this.style.background='#fff0f0'" onmouseout="this.style.background=''">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      Delete
+    </div>
+  </div>
+</div>
+
+<!-- SIDEBAR RENAME MODAL -->
+<div id="sb-rename-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3001;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;padding:28px 32px;width:90%;max-width:380px;box-shadow:0 16px 48px rgba(0,0,0,.25)">
+    <div id="sb-rename-title" style="font-size:16px;font-weight:800;color:var(--navy);margin-bottom:16px">Rename</div>
+    <input id="sb-rename-input" type="text" onkeydown="if(event.key==='Enter')confirmSbRename()" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd2);border-radius:8px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:6px">
+    <div id="sb-rename-err" style="font-size:11px;color:#c0392b;min-height:16px;margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px">
+      <button onclick="confirmSbRename()" style="flex:1;padding:10px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Save</button>
+      <button onclick="closeSbRenameModal()" style="flex:1;padding:10px;background:var(--bg3);color:var(--tx);border:1px solid var(--bd2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- SIDEBAR DELETE CONFIRMATION MODAL -->
+<div id="sb-delete-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3001;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;padding:28px 32px;width:90%;max-width:380px;box-shadow:0 16px 48px rgba(0,0,0,.25)">
+    <div style="font-size:16px;font-weight:800;color:var(--navy);margin-bottom:6px">Delete?</div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:4px">You are about to permanently delete:</div>
+    <div id="sb-delete-lbl" style="font-size:13px;font-weight:700;color:#c0392b;background:#fff0f0;border-radius:6px;padding:6px 10px;margin-bottom:16px"></div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:6px">Type <strong>delete</strong> to confirm. This cannot be undone.</div>
+    <input id="sb-delete-input" type="text" placeholder='Type "delete" here' onkeydown="if(event.key==='Enter')confirmSbDelete()" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd2);border-radius:8px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:6px">
+    <div id="sb-delete-err" style="font-size:11px;color:#c0392b;min-height:16px;margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px">
+      <button onclick="confirmSbDelete()" style="flex:1;padding:10px;background:#c0392b;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Delete</button>
+      <button onclick="closeSbDeleteModal()" style="flex:1;padding:10px;background:var(--bg3);color:var(--tx);border:1px solid var(--bd2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <!-- PERIOD COLUMN RIGHT-CLICK CONTEXT MENU -->
 <div id="period-ctx-menu" style="display:none;position:fixed;z-index:3000;background:#fff;border:1.5px solid var(--bd2);border-radius:9px;box-shadow:0 6px 24px rgba(0,0,0,.15);min-width:150px;overflow:hidden">
