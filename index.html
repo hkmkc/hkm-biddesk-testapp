@@ -216,6 +216,43 @@ tr:hover .del-row{opacity:1}
 .dash-search-grp{display:flex;flex-direction:column;gap:3px}
 .dash-section-hd{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--navy);margin-bottom:10px;margin-top:20px;padding-bottom:6px;border-bottom:2px solid var(--bg3)}
 .dash-section-hd:first-of-type{margin-top:4px}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
+.kpi-card{background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:14px 16px;box-shadow:var(--sh)}
+.kpi-card-icon{font-size:20px;margin-bottom:6px}
+.kpi-card-val{font-size:28px;font-weight:800;color:var(--navy);line-height:1}
+.kpi-card-lbl{font-size:11px;color:var(--tx3);margin-top:3px;font-weight:500}
+.kpi-card-sub{font-size:11px;color:var(--tx2);margin-top:2px;font-weight:600}
+.dash-main-grid{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px}
+.dash-wf-col{flex:2;min-width:280px}
+.dash-side-col{flex:1;min-width:240px}
+.wf-card{background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:var(--sh);transition:.15s}
+.wf-card:hover{border-color:var(--bd2)}
+.wf-prog{background:var(--bg3);border-radius:4px;height:5px;margin:10px 0 14px;overflow:hidden}
+.wf-prog-fill{height:5px;border-radius:4px;transition:.4s}
+.wf-steps-row{display:flex;align-items:flex-start;gap:0}
+.wf-step{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative}
+.wf-step:not(:first-child)::before{content:'';position:absolute;top:13px;right:50%;width:100%;height:2px;background:var(--bd);z-index:0}
+.wf-step.done::before{background:var(--green)}
+.wf-step-dot{width:28px;height:28px;border-radius:50%;border:2px solid var(--bd);background:#fff;color:var(--tx3);display:flex;align-items:center;justify-content:center;font-size:12px;z-index:1;transition:.15s;flex-shrink:0;position:relative}
+.wf-step.done .wf-step-dot{background:var(--green);border-color:var(--green);color:#fff}
+.wf-step.active .wf-step-dot{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:0 0 0 3px rgba(27,92,158,.15)}
+.wf-step.clickable .wf-step-dot{cursor:pointer}
+.wf-step.clickable .wf-step-dot:hover{transform:scale(1.1)}
+.wf-step-lbl{font-size:9px;text-align:center;line-height:1.3;max-width:54px;color:var(--tx3)}
+.wf-step.done .wf-step-lbl{color:var(--green)}
+.wf-step.active .wf-step-lbl{color:var(--navy);font-weight:700}
+.dash-cal{background:#fff;border:1.5px solid var(--bd);border-radius:12px;padding:14px;box-shadow:var(--sh);margin-bottom:12px}
+.dash-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center}
+.dash-cal-dow{font-size:9px;font-weight:700;color:var(--tx3);padding:2px 0 6px}
+.dash-cal-dy{font-size:11px;padding:3px 1px;position:relative;line-height:1.3}
+.dash-cal-dy.today .dash-cal-dnum{background:var(--navy);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-weight:800}
+.dash-cal-dy.has-due{font-weight:700;color:var(--tx)}
+.dash-cal-dots{display:flex;gap:1px;justify-content:center;margin-top:1px;min-height:5px}
+.dash-cal-dot{width:4px;height:4px;border-radius:50%;display:inline-block}
+.due-list{background:#fff;border:1.5px solid var(--bd);border-radius:12px;overflow:hidden;box-shadow:var(--sh)}
+.due-item{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--bg3)}
+.due-item:last-child{border-bottom:none}
+.due-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .dsearch-res .tw{max-height:400px;overflow-y:auto}
 /* ── Bid Overview ── */
 .ov-badge{display:inline-block;background:var(--gold);color:var(--navy);border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700;margin-left:5px}
@@ -3540,49 +3577,120 @@ function exportAnalytics(cid,fmt='csv'){
 
 // ── END ANALYTICS ──────────────────────────────────────────────
 
+function toggleWfStep(ddId,step){
+  if(!DB.wf)DB.wf={};
+  if(!DB.wf[ddId])DB.wf[ddId]={};
+  DB.wf[ddId][step]=!DB.wf[ddId][step];
+  dbSave();render();
+}
+
+function rWfCard(dd,now){
+  const wf=(DB.wf||{})[dd.id]||{};
+  const bs=getBidStatus(dd.id);
+  const next=getNextDue(dd);
+  const ms=next-now;
+  const s3=['working','pending','submitted','admin'].includes(bs);
+  const s4=['pending','submitted','admin'].includes(bs);
+  const s5=['submitted','admin'].includes(bs);
+  const done=[!!wf.qbe,!!wf.upload,s3,s4,s5];
+  const pct=Math.round(done.filter(Boolean).length/5*100);
+  const activeIdx=done.findIndex(d=>!d);
+  const labels=['Get QBE Reports','Upload to App','Working on Bids','Manager Review','Final Submit'];
+  const ids=['qbe','upload',null,null,null];
+  const isClickable=[true,true,false,false,false];
+  const typeBadge=dd.type==='weekly'
+    ?'<span style="background:#e0eeff;color:var(--navy);font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;flex-shrink:0">WEEKLY</span>'
+    :'<span style="background:#fef3c7;color:#92400e;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;flex-shrink:0">MONTHLY</span>';
+  const isDone=s5;
+  const cardStyle=isDone?'border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.03)':bs==='closed'?'border-color:rgba(192,57,43,.3);background:rgba(192,57,43,.03)':'';
+  const stepsHtml=done.map((isDoneStep,i)=>{
+    const isActive=i===activeIdx;
+    const status=isDoneStep?'done':isActive?'active':'pending';
+    const canClick=isClickable[i]&&DB._isAdmin;
+    const clickAttr=canClick?`onclick="toggleWfStep('${dd.id}','${ids[i]}')" title="${labels[i]} — click to toggle"`:`title="${labels[i]}"`;
+    return`<div class="wf-step ${status}${canClick?' clickable':''}">
+      <div class="wf-step-dot" ${clickAttr}>${isDoneStep?'✓':(i+1)}</div>
+      <div class="wf-step-lbl">${labels[i]}</div>
+    </div>`;
+  }).join('');
+  return`<div class="wf-card" style="${cardStyle}">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px">${typeBadge}<span style="font-size:13px;font-weight:700;color:var(--navy)">${dd.name}</span></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:11px">${fmtCountdown(ms)}</span>
+        <span style="font-size:11px;font-weight:800;color:${isDone?'var(--green)':'var(--navy)'}">${pct}%</span>
+      </div>
+    </div>
+    <div class="wf-prog"><div class="wf-prog-fill" style="width:${pct}%;background:${isDone?'var(--green)':'var(--navy)'}"></div></div>
+    <div class="wf-steps-row">${stepsHtml}</div>
+  </div>`;
+}
+
+function rDashCal(now){
+  const y=now.getFullYear(),mo=now.getMonth(),tod=now.getDate();
+  const daysInMonth=new Date(y,mo+1,0).getDate();
+  const first=makeLADeadline(y,mo,1,12,0);
+  const firstDow=first.getDay();
+  const dueDays={};
+  DUE_DATES.forEach(dd=>{
+    if(dd.type==='weekly'){
+      let d=((dd.day-firstDow+7)%7)+1;
+      while(d<=daysInMonth){
+        if(!dueDays[d])dueDays[d]=[];
+        dueDays[d].push(dd);
+        d+=7;
+      }
+    } else {
+      if(dd.dom<=daysInMonth){
+        if(!dueDays[dd.dom])dueDays[dd.dom]=[];
+        dueDays[dd.dom].push(dd);
+      }
+    }
+  });
+  const mnames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const dows=['Su','Mo','Tu','We','Th','Fr','Sa'];
+  let html=`<div class="dash-cal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:800;color:var(--navy)">${mnames[mo]} ${y}</div>
+      <div style="font-size:10px;color:var(--tx3);display:flex;gap:8px;align-items:center">
+        <span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--navy);margin-right:3px;vertical-align:middle"></span>Weekly</span>
+        <span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--gold2);margin-right:3px;vertical-align:middle"></span>Monthly</span>
+      </div>
+    </div>
+    <div class="dash-cal-grid">`;
+  dows.forEach(d=>html+=`<div class="dash-cal-dow">${d}</div>`);
+  for(let i=0;i<firstDow;i++)html+=`<div class="dash-cal-dy"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const dues=dueDays[d]||[];
+    const isToday=d===tod;
+    const hasW=dues.some(dd=>dd.type==='weekly');
+    const hasM=dues.some(dd=>dd.type==='monthly');
+    html+=`<div class="dash-cal-dy${isToday?' today':''}${dues.length?' has-due':''}">
+      <span class="dash-cal-dnum">${d}</span>
+      <div class="dash-cal-dots">
+        ${hasW?'<span class="dash-cal-dot" style="background:var(--navy)"></span>':''}
+        ${hasM?'<span class="dash-cal-dot" style="background:var(--gold2)"></span>':''}
+      </div>
+    </div>`;
+  }
+  html+=`</div></div>`;
+  return html;
+}
+
 function rDash(){
   const now=getPST();
   const casinoOpts=[...DB.casinos].sort((a,b)=>a.name.localeCompare(b.name)).map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-
-  function ddRow(dd){
-    const next=getNextDue(dd);
-    const ms=next-now;
-    const status=getBidStatus(dd.id);
-    const nextStr=next.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',weekday:'short',month:'short',day:'numeric'});
-    const cntClass=ms<0?'cnt-red':ms<86400000?'cnt-red':ms<3*86400000?'cnt-yellow':'cnt-green';
-    // Split label into schedule (day) and time parts
-    const lbl=dd.label||'';
-    const timePart=lbl.match(/\d{1,2}:\d{2}\s*(AM|PM)\s*(PST)?/i);
-    const schedPart=lbl.replace(timePart?timePart[0]:'','').replace(/,\s*$/,'').trim();
-    const timeStr=timePart?timePart[0].trim():'Within the day';
-    const isDone=status==='submitted'||status==='admin';
-    const rowStyle=isDone?'background:rgba(16,185,129,.06);':'';
-    const checkmark=isDone?`<span style="color:#10b981;font-size:15px;margin-left:6px;font-weight:700" title="${status==='submitted'?'Submitted':'Done by admin'}">✓</span>`:'';
-    return`<tr style="${rowStyle}">
-      <td style="font-weight:700;color:var(--navy);white-space:nowrap">${dd.name}${checkmark}</td>
-      <td style="font-size:11px;color:var(--tx2);white-space:nowrap">${schedPart}</td>
-      <td style="font-size:11px;color:var(--tx2);white-space:nowrap">${timeStr}</td>
-      <td style="white-space:nowrap;font-weight:600;font-size:12px">${nextStr}</td>
-      <td class="${cntClass}" style="white-space:nowrap;font-weight:700">${fmtCountdown(ms)}</td>
-      <td>
-        <select class="bid-status ${statusClass(status)}" onchange="setBidStatus('${dd.id}',this.value);this.className='bid-status '+statusClass(this.value);this.closest('tr').style.background=(this.value==='submitted'||this.value==='admin')?'rgba(16,185,129,.06)':'';this.closest('tr').querySelector('td:first-child').querySelector('span')?this.closest('tr').querySelector('td:first-child').querySelector('span').remove():null;">
-          <option value="">— status —</option>
-          <option value="working"${status==='working'?' selected':''}>🔵 Working on it</option>
-          <option value="pending"${status==='pending'?' selected':''}>🟡 Pending for checking</option>
-          <option value="submitted"${status==='submitted'?' selected':''}>🟢 Submitted</option>
-          <option value="closed"${status==='closed'?' selected':''}>🔴 Closed – not submitted</option>
-          <option value="admin"${status==='admin'?' selected':''}>✅ Done by admin</option>
-        </select>
-      </td>
-    </tr>`;
-  }
-
-  const weekly=DUE_DATES.filter(d=>d.type==='weekly').slice().sort((a,b)=>getNextDue(a)-getNextDue(b));
-  const monthly=DUE_DATES.filter(d=>d.type==='monthly').slice().sort((a,b)=>getNextDue(a)-getNextDue(b));
-
+  const allDue=DUE_DATES;
+  const submitted=allDue.filter(dd=>['submitted','admin'].includes(getBidStatus(dd.id))).length;
+  const inProgress=allDue.filter(dd=>getBidStatus(dd.id)==='working').length;
+  const weeklyDue=allDue.filter(dd=>dd.type==='weekly').sort((a,b)=>getNextDue(a)-getNextDue(b));
+  const monthlyDue=allDue.filter(dd=>dd.type==='monthly').sort((a,b)=>getNextDue(a)-getNextDue(b));
+  const allSorted=[...allDue].sort((a,b)=>getNextDue(a)-getNextDue(b));
   const _dateStr=now.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',weekday:'long',month:'long',day:'numeric',year:'numeric'});
   const _timeStr=now.toLocaleTimeString('en-US',{timeZone:'America/Los_Angeles',hour:'2-digit',minute:'2-digit'})+' PST';
   const _userStr=DB._currentUser?(DB._isAdmin?'👤 Admin':'👤 '+DB._currentUser.name):'';
+  const nextWeeklyMs=getNextDue(weeklyDue[0])-now;
+  const nextMonthlyMs=getNextDue(monthlyDue[0])-now;
   return`
 <div class="dash-sticky">
   <div class="dash-hdr">
@@ -3601,7 +3709,7 @@ function rDash(){
       <select id="dash-casino" style="min-width:200px">${casinoOpts}</select>
     </div>
     <div class="dash-search-grp" style="flex:1;min-width:200px">
-      <div class="fl" style="margin:0 0 3px">Item # or HKM Code</div>
+      <div class="fl" style="margin:0 0 3px">💰 Bid Prices Search — Item # or HKM Code</div>
       <input type="text" id="dash-q" placeholder="Search by item number or HKM code…" style="width:100%" onkeydown="if(event.key==='Enter')dashSearch()">
     </div>
     <div style="display:flex;gap:8px;align-items:flex-end">
@@ -3613,40 +3721,115 @@ function rDash(){
   </div>
 </div>
 <div id="dash-al" class="al" style="margin-bottom:6px"></div>
-<div id="dash-results" class="dsearch-res" style="margin-bottom:20px"></div>
+<div id="dash-results" class="dsearch-res" style="margin-bottom:16px"></div>
 
-${DB._isAdmin ? `
-<div>
-  <div class="dash-section-hd"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Weekly Bids</div>
-  <div class="dd-table-wrap">
-    <table class="dd-table">
-      <colgroup><col style="width:16%"><col style="width:20%"><col style="width:14%"><col style="width:14%"><col style="width:12%"><col style="width:24%"></colgroup>
-      <thead><tr><th>Casino</th><th>Schedule</th><th>Time (PST)</th><th>Due Date</th><th>Countdown</th><th>Status</th></tr></thead>
-      <tbody>${weekly.map(dd=>ddRow(dd)).join('')}</tbody></table>
+<div class="kpi-row">
+  <div class="kpi-card">
+    <div class="kpi-card-icon">🗓️</div>
+    <div class="kpi-card-val">${weeklyDue.length}</div>
+    <div class="kpi-card-lbl">Weekly Bids</div>
+    <div class="kpi-card-sub">${fmtCountdown(nextWeeklyMs)} to next</div>
   </div>
-  <div class="dash-section-hd"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Monthly Bids</div>
-  <div class="dd-table-wrap">
-    <table class="dd-table">
-      <colgroup><col style="width:16%"><col style="width:20%"><col style="width:14%"><col style="width:14%"><col style="width:12%"><col style="width:24%"></colgroup>
-      <thead><tr><th>Casino</th><th>Schedule</th><th>Time (PST)</th><th>Due Date</th><th>Countdown</th><th>Status</th></tr></thead>
-      <tbody>${monthly.map(dd=>ddRow(dd)).join('')}</tbody></table>
+  <div class="kpi-card">
+    <div class="kpi-card-icon">📅</div>
+    <div class="kpi-card-val">${monthlyDue.length}</div>
+    <div class="kpi-card-lbl">Monthly Bids</div>
+    <div class="kpi-card-sub">${fmtCountdown(nextMonthlyMs)} to next</div>
   </div>
-</div>` : `
-<div>
-  <div class="dash-section-hd"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Casino Bid Overview</div>
-  <div style="display:flex;flex-wrap:wrap;gap:12px">
-    ${[...DB.casinos].sort((a,b)=>a.name.localeCompare(b.name)).map(casino=>{
-      const totalItems=((casino.cats||[]).reduce((n,cat)=>n+gI(casino.id,cat).length,0));
-      const pricedItems=(casino.cats||[]).reduce((n,cat)=>n+gI(casino.id,cat).filter(it=>getLastBid(casino.id,cat,it.item)!=null).length,0);
-      return`<div onclick="nav('bidoverview',{ovCasino:${JSON.stringify(casino).replace(/"/g,"'")}})" style="background:#fff;border:1.5px solid var(--bd2);border-radius:10px;padding:16px 20px;min-width:200px;flex:1;cursor:pointer;transition:.15s;box-shadow:0 1px 4px rgba(0,0,0,.06)" onmouseover="this.style.borderColor='var(--navy)';this.style.boxShadow='0 4px 16px rgba(27,92,158,.12)'" onmouseout="this.style.borderColor='var(--bd2)';this.style.boxShadow='0 1px 4px rgba(0,0,0,.06)'">
-        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px">${casino.name}</div>
-        <div style="font-size:11px;color:var(--tx2);margin-bottom:10px">${casino.short||''} &nbsp;·&nbsp; ${(casino.cats||[]).length} categories</div>
-        <div style="font-size:11px;color:var(--tx3)">${pricedItems} of ${totalItems} items priced</div>
-        <div style="margin-top:10px;font-size:11px;color:var(--navy);font-weight:700">View Bid Overview →</div>
-      </div>`;
-    }).join('')}
+  <div class="kpi-card">
+    <div class="kpi-card-icon">🔵</div>
+    <div class="kpi-card-val">${inProgress}</div>
+    <div class="kpi-card-lbl">In Progress</div>
+    <div class="kpi-card-sub">Working on bids</div>
   </div>
-</div>`}</div>`;
+  <div class="kpi-card">
+    <div class="kpi-card-icon">✅</div>
+    <div class="kpi-card-val">${submitted}<span style="font-size:14px;color:var(--tx3)">/${allDue.length}</span></div>
+    <div class="kpi-card-lbl">Submitted</div>
+    <div class="kpi-card-sub">${Math.round(submitted/allDue.length*100)}% complete</div>
+  </div>
+</div>
+
+<div class="dash-main-grid">
+  <div class="dash-wf-col">
+    <div class="dash-section-hd" style="margin-top:0">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Bidding Workflow Tracker
+    </div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:12px">Tap steps 1 & 2 to mark complete · Steps 3–5 follow bid status</div>
+    <div style="font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:6px;margin-top:4px">📆 Weekly</div>
+    ${weeklyDue.map(dd=>rWfCard(dd,now)).join('')}
+    <div style="font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:6px;margin-top:16px">📆 Monthly</div>
+    ${monthlyDue.map(dd=>rWfCard(dd,now)).join('')}
+  </div>
+  <div class="dash-side-col">
+    <div class="dash-section-hd" style="margin-top:0">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Bid Schedule
+    </div>
+    ${rDashCal(now)}
+    <div class="dash-section-hd">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Upcoming Deadlines
+    </div>
+    <div class="due-list">
+      ${allSorted.slice(0,6).map(dd=>{
+        const next=getNextDue(dd);
+        const ms=next-now;
+        const bs=getBidStatus(dd.id);
+        const isDone=['submitted','admin'].includes(bs);
+        const dotCol=dd.type==='weekly'?'var(--navy)':'var(--gold2)';
+        const nextStr=next.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',weekday:'short',month:'short',day:'numeric'});
+        return`<div class="due-item">
+          <div class="due-dot" style="background:${dotCol}"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${dd.name}</div>
+            <div style="font-size:10px;color:var(--tx3)">${nextStr} &nbsp;·&nbsp; ${dd.type==='weekly'?'Weekly':'Monthly'}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:11px">${fmtCountdown(ms)}</div>
+            ${isDone?'<div style="font-size:9px;color:var(--green);font-weight:700">✓ Done</div>':''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    ${!DB._isAdmin?`
+    <div class="dash-section-hd" style="margin-top:18px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Casino Bid Overview
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px">
+      ${[...DB.casinos].sort((a,b)=>a.name.localeCompare(b.name)).map(casino=>{
+        const totalItems=(casino.cats||[]).reduce((n,cat)=>n+gI(casino.id,cat).length,0);
+        const pricedItems=(casino.cats||[]).reduce((n,cat)=>n+gI(casino.id,cat).filter(it=>getLastBid(casino.id,cat,it.item)!=null).length,0);
+        return`<div onclick="nav('bidoverview',{ovCasino:${JSON.stringify(casino).replace(/"/g,"'")}})" style="background:#fff;border:1.5px solid var(--bd2);border-radius:10px;padding:14px 16px;min-width:180px;flex:1;cursor:pointer;transition:.15s;box-shadow:var(--sh)" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--bd2)'">
+          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:3px">${casino.name}</div>
+          <div style="font-size:10px;color:var(--tx3);margin-bottom:6px">${(casino.cats||[]).length} categories</div>
+          <div style="font-size:11px;color:var(--tx2)">${pricedItems}/${totalItems} priced</div>
+        </div>`;
+      }).join('')}
+    </div>`:``}
+  </div>
+</div>
+
+${DB._isAdmin?`
+<div class="dash-section-hd">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+  Casino Bid Overview
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+  ${[...DB.casinos].sort((a,b)=>a.name.localeCompare(b.name)).map(casino=>{
+    const totalItems=(casino.cats||[]).reduce((n,cat)=>n+gI(casino.id,cat).length,0);
+    const pricedItems=(casino.cats||[]).reduce((n,cat)=>n+gI(casino.id,cat).filter(it=>getLastBid(casino.id,cat,it.item)!=null).length,0);
+    return`<div onclick="nav('bidoverview',{ovCasino:${JSON.stringify(casino).replace(/"/g,"'")}})" style="background:#fff;border:1.5px solid var(--bd2);border-radius:10px;padding:14px 18px;min-width:180px;flex:1;cursor:pointer;transition:.15s;box-shadow:var(--sh)" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--bd2)'">
+      <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:3px">${casino.name}</div>
+      <div style="font-size:10px;color:var(--tx3);margin-bottom:8px">${(casino.cats||[]).length} categories</div>
+      <div style="background:var(--bg3);border-radius:3px;height:4px;margin-bottom:4px;overflow:hidden"><div style="background:var(--navy);height:4px;width:${totalItems?Math.round(pricedItems/totalItems*100):0}%"></div></div>
+      <div style="font-size:10px;color:var(--tx2)">${pricedItems}/${totalItems} items priced</div>
+    </div>`;
+  }).join('')}
+</div>`:''}
+`;
 }
 function dashSearch(){
   const cid=document.getElementById('dash-casino')?.value;
