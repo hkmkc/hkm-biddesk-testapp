@@ -137,9 +137,11 @@ input:focus,select:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 
 .pss{padding:6px 10px;border-radius:var(--r);border:2px solid;font-size:12px;font-weight:600;background:var(--bg2);color:var(--tx);font-family:inherit}
 .psa .pss{border-color:#0f6e56}.psb2 .pss{border-color:var(--navy3)}
 .vs{font-size:20px;color:var(--tx3);padding-bottom:6px}
-.upg{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.upp{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rl2);padding:18px;box-shadow:var(--sh)}
-.upi{font-size:36px;margin-bottom:8px}
+.upg{max-width:860px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.upg-solo{max-width:500px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.upp{background:#fff;border:1.5px solid var(--bd);border-radius:10px;padding:22px 24px;box-shadow:var(--sh);border-top:3px solid var(--navy)}
+.up-info{background:rgba(27,92,158,.04);border:1px solid rgba(27,92,158,.13);border-radius:10px;padding:16px 18px;margin-top:20px;border-top:2px solid rgba(27,92,158,.18)}
+.upi{display:none}
 .upt{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:4px}
 .upd{font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:14px}
 .ups{font-size:11px;color:var(--tx2);line-height:1.9;margin-bottom:14px;padding-left:2px}
@@ -1557,7 +1559,7 @@ function rUpload(){
   <div style="font-size:20px;font-weight:800;color:var(--navy);margin-bottom:3px">Upload Hub</div>
   <div style="font-size:13px;color:var(--tx2)">Three uploads replace your manual workflow — plus add new categories or casinos any time</div>
 </div>
-<div class="tabs-p">${tabs.map(t=>`<div class="tab ${S.uTab===t.id?'on':''}" onclick="S.uTab='${t.id}';render()">${t.l}</div>`).join('')}</div>
+<div style="display:flex;justify-content:center;flex-wrap:wrap;gap:6px;margin-bottom:20px">${tabs.map(t=>{const a=S.uTab===t.id;return`<div onclick="S.uTab='${t.id}';render()" style="padding:8px 18px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid ${a?'var(--navy)':'var(--bd2)'};background:${a?'var(--navy)':'#fff'};color:${a?'#fff':'var(--tx2)'};transition:.15s">${t.l}</div>`;}).join('')}</div>
 ${S.uTab==='qbe'?rUQBE():S.uTab==='pl'?rUPL():S.uTab==='casino'?rUCasino():S.uTab==='import'?rUImport():rUAddBid()}`;}
 
 function rUQBE(){return`
@@ -1581,15 +1583,13 @@ function rUQBE(){return`
   </div>
   <div class="uz">
     <input type="file" id="qf" accept=".csv" onchange="queueFile(this,'hQBE','qbe')">
-    <div style="font-size:26px;margin-bottom:6px">📄</div>
     <div style="font-weight:700;color:var(--navy);margin-bottom:3px">Drop QBE CSV here or click to browse</div>
     <div style="font-size:11px;color:var(--tx2)">QBE REPORT_STATIONS.CSV</div>
   </div>
   <div class="pb" id="qbe-pb"><div class="pf" id="qbe-pf" style="width:0%"></div></div>
   <div id="qa" class="al" style="margin-top:8px"></div>
 </div>
-<div class="upp" style="background:var(--bg3);border-style:dashed">
-  <div style="font-size:22px;margin-bottom:8px">💡</div>
+<div class="upp" style="background:rgba(27,92,158,.03);border-top-color:var(--bd)">
   <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">Your Power Query — now automated</div>
   <div style="font-size:12px;color:var(--tx2);line-height:1.9">
     <b>Before (manual):</b><br>
@@ -1607,7 +1607,7 @@ function rUQBE(){return`
 </div>`;}
 
 function rUPL(){return`
-<div class="upg">
+<div class="upg-solo">
 <div class="upp">
   <div class="upi">💰</div>
   <div class="upt">QuickBooks Price List</div>
@@ -1635,7 +1635,6 @@ function rUPL(){return`
   </div>
   <div class="uz">
     <input type="file" id="pf2" accept=".xlsx,.xls,.csv" onchange="autoFillPL(this);queueFile(this,'hPL','pl')">
-    <div style="font-size:26px;margin-bottom:6px">📄</div>
     <div style="font-weight:700;color:var(--navy);margin-bottom:3px">Drop QB Price List here or click to browse</div>
     <div style="font-size:11px;color:var(--tx2)">.xlsx, .xls, or .csv</div>
   </div>
@@ -1647,7 +1646,6 @@ function rUPL(){return`
 function rUCasino(){return`
 <div class="upg">
 <div class="upp">
-  <div class="upi">🏨</div>
   <div class="upt">Casino Item Sheet Update</div>
   <div class="upd">When a casino sends an updated bid template, upload it here per casino and category. The item list syncs to match — new items are added, discontinued items are removed, and the exact casino order is preserved.</div>
   <div class="ups">
@@ -1679,15 +1677,13 @@ function rUCasino(){return`
   </div>
   <div class="uz">
     <input type="file" id="cf" accept=".xlsx,.xls,.xlsm,.xlsb,.csv,.tsv" onchange="queueFile(this,'hCasino','casino')">
-    <div style="font-size:26px;margin-bottom:6px">📄</div>
     <div style="font-weight:700;color:var(--navy);margin-bottom:3px">Drop casino sheet here or click to browse</div>
     <div style="font-size:11px;color:var(--tx2)">.xlsx, .xls, or .csv accepted</div>
   </div>
   <div class="pb" id="cs-pb"><div class="pf" id="cs-pf" style="width:0%"></div></div>
   <div id="ca" class="al" style="margin-top:8px"></div>
 </div>
-<div class="upp" style="background:var(--bg3);border-style:dashed">
-  <div style="font-size:22px;margin-bottom:8px">📋</div>
+<div class="upp" style="background:rgba(27,92,158,.03);border-top-color:var(--bd)">
   <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px">What we read vs. ignore</div>
   <div style="font-size:12px;color:var(--tx2);line-height:2.1">
     <b style="color:var(--navy)">Item # / Item No / Item Code ← we read</b><br>
@@ -1698,8 +1694,8 @@ function rUCasino(){return`
     <span style="color:var(--red)">90D Volume ← IGNORED for RWLV only</span><br>
   </div>
   <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bd);font-size:11px;color:var(--tx3);line-height:1.8">
-    💡 <b>Column positions vary per casino</b> — the app reads by label, not by fixed column number.<br><br>
-    💡 <b>HKM codes</b> are your internal reference — never in the casino sheet. They are assigned by you and survive every upload.
+    <b>Column positions vary per casino</b> — the app reads by label, not by fixed column number.<br><br>
+    <b>HKM codes</b> are your internal reference — never in the casino sheet. They are assigned by you and survive every upload.
   </div>
 </div>
 </div>`;}
@@ -3296,6 +3292,41 @@ function genInsight(w,l,n,nb){
   return s;
 }
 
+function rTopItems(cid,allItems){
+  const seen=new Set();
+  const withVol=allItems
+    .filter(it=>it.hkm&&it.hkm.trim())
+    .map(it=>{
+      const key=it.hkm.trim();
+      const lp=DB.lps[`${cid}|${key}`]||DB.lps[`${cid}|${it.item}`]||{};
+      return{hkm:key,desc:it.desc||'',v365:lp.v365||0,v90:lp.v90||0,v30:lp.v30||0};
+    })
+    .filter(it=>{if(!it.v365||seen.has(it.hkm))return false;seen.add(it.hkm);return true;})
+    .sort((a,b)=>b.v365-a.v365)
+    .slice(0,10);
+  if(!withVol.length)return`<div style="flex:1;min-width:180px;border-left:1.5px solid var(--bg3);padding-left:20px;display:flex;align-items:center;justify-content:center"><div style="font-size:12px;color:var(--tx3);text-align:center;line-height:1.8">No purchase volume data.<br>Upload QBE History to see top items.</div></div>`;
+  const maxV=withVol[0].v365;
+  const rows=withVol.map((it,i)=>{
+    const pct=maxV?Math.round(it.v365/maxV*100):0;
+    const bar=i===0?'var(--navy)':i<3?'var(--navy3)':'#b0c4de';
+    return`<div style="margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px">
+        <div style="font-size:11px;font-weight:800;color:var(--navy)">${it.hkm}</div>
+        <div style="font-size:10px;color:var(--tx3);white-space:nowrap">${it.v365}× /yr</div>
+      </div>
+      <div style="font-size:10px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;margin-bottom:3px" title="${it.desc.replace(/"/g,'&quot;')}">${it.desc}</div>
+      <div style="height:4px;background:var(--bg3);border-radius:2px"><div style="height:100%;width:${pct}%;background:${bar};border-radius:2px"></div></div>
+    </div>`;
+  }).join('');
+  return`<div style="flex:1;min-width:180px;border-left:1.5px solid var(--bg3);padding-left:20px">
+    <div style="font-size:12px;font-weight:800;color:var(--navy);margin-bottom:4px;display:flex;align-items:center;gap:6px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      Top Ordered Items
+    </div>
+    <div style="font-size:10px;color:var(--tx3);margin-bottom:12px">Ranked by 365-day purchase frequency (QBE data)</div>
+    ${rows}
+  </div>`;
+}
 function rAnSection(cid,data,period,label,threshold){
   const{winning,losing,notOrdered,notBidding}=data;
   const total=winning.length+losing.length+notOrdered.length+notBidding.length;
@@ -3364,6 +3395,7 @@ function rAnSection(cid,data,period,label,threshold){
         </div>
       </div>
     </div>
+    ${rTopItems(cid,[...winning,...losing,...notOrdered])}
   </div>
   <div class="an-insight">${insight}</div>
 </div>`;
@@ -3391,7 +3423,7 @@ function rAnalytics(){
   <div class="sticky-ctrl" style="border-bottom:none;padding-bottom:0;margin-bottom:0">
   <div class="an-hd">
     <div>
-      <div class="an-title">📊 Analytics</div>
+      <div class="an-title">Analytics</div>
       <div class="an-sub">Bid performance by casino — based on QBE purchase history upload dates</div>
     </div>
     <div class="an-hd-actions">
@@ -3556,9 +3588,8 @@ function rAnalyticsDetail(){
 </div>
 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:0">
   <div style="display:flex;align-items:center;gap:12px">
-    <div style="width:18px;height:18px;border-radius:50%;background:${segColors[segment]};flex-shrink:0"></div>
     <div>
-      <div style="font-size:20px;font-weight:800;color:var(--navy)">${segIcons[segment]} ${segLabels[segment]} Items</div>
+      <div style="font-size:20px;font-weight:800;color:var(--navy)">${segLabels[segment]} Items</div>
       <div style="font-size:12px;color:var(--tx3)">${casino.name} · ${periodLabel} · <b>${items.length} items</b></div>
       <div style="font-size:11px;color:${segColors[segment]};font-weight:600;margin-top:2px">${segSubs[segment]}</div>
     </div>
@@ -3982,7 +4013,7 @@ function rDash(){
       <select id="dash-casino" style="min-width:240px">${casinoOpts}</select>
     </div>
     <div class="dash-search-grp" style="flex:1;min-width:200px">
-      <div class="fl" style="margin:0 0 3px">💰 Bid Prices Search — Item # or HKM Code</div>
+      <div class="fl" style="margin:0 0 3px">Bid Prices Search — Item # or HKM Code</div>
       <input type="text" id="dash-q" placeholder="Search by item number or HKM code…" style="width:100%" onkeydown="if(event.key==='Enter')dashSearch()">
     </div>
     <div style="display:flex;gap:8px;align-items:flex-end">
@@ -3993,10 +4024,10 @@ function rDash(){
     </div>
   </div>
 </div>
+<div id="dash-al" class="al" style="margin-bottom:4px"></div>
+<div id="dash-results" class="dsearch-res" style="margin-bottom:10px"></div>
 <div class="dash-main-grid">
   <div class="dash-wf-col">
-    <div id="dash-al" class="al" style="margin-bottom:4px"></div>
-    <div id="dash-results" class="dsearch-res" style="margin-bottom:10px"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
       <div style="border:1.5px solid var(--navy);border-radius:10px;padding:8px 10px">
         <div style="font-size:9px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px;text-align:center">Weekly Preview</div>
