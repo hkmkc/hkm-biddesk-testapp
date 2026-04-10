@@ -3971,19 +3971,34 @@ function rDash(){
 `;
 }
 function _getBidValidThru(cid, weekly){
-  // Find the DUE_DATE for this casino+type and return the next due date formatted
-  const type=weekly?'weekly':'monthly';
-  const dd=DUE_DATES.find(d=>d.casino===cid&&d.type===type);
-  if(!dd)return{label:'—',isCurrent:false};
   const now=getPST();
-  const next=getNextDue(dd);
-  const ms=next-now;
-  const dateStr=next.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',month:'short',day:'numeric',year:'numeric'});
-  // "current" = deadline is still in the future (bid still active)
-  const isCurrent=ms>0;
-  const isUrgent=ms>0&&ms<86400000; // < 24h
-  const isExpired=ms<=0;
-  return{label:dateStr,isCurrent,isUrgent,isExpired,ms};
+  const realNow=new Date();
+  if(weekly){
+    // Weekly bids run Sun–Sat in LA time
+    const dow=now.getDay(); // 0=Sun … 6=Sat (LA timezone)
+    const msSinceWeekStart=dow*86400000;
+    const sunUtc=new Date(realNow.getTime()-msSinceWeekStart);
+    const satUtc=new Date(realNow.getTime()+(6-dow)*86400000);
+    const fmt=(d)=>d.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',month:'short',day:'numeric'});
+    const fmtY=(d)=>d.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',month:'short',day:'numeric',year:'numeric'});
+    const label=`${fmt(sunUtc)} – ${fmtY(satUtc)}`;
+    // "current" if today is within this week (always true by definition)
+    // highlight based on how close we are to Saturday
+    const msToSat=(6-dow)*86400000;
+    const isUrgent=msToSat<86400000; // less than 1 day to end of week
+    return{label,isCurrent:true,isUrgent,isExpired:false};
+  } else {
+    // Monthly: show the due date for the current month's bid
+    const dd=DUE_DATES.find(d=>d.casino===cid&&d.type==='monthly');
+    if(!dd)return{label:'—',isCurrent:false,isUrgent:false,isExpired:false};
+    const next=getNextDue(dd);
+    const ms=next-now;
+    const dateStr=next.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',month:'short',day:'numeric',year:'numeric'});
+    const isCurrent=ms>0;
+    const isUrgent=ms>0&&ms<86400000;
+    const isExpired=ms<=0;
+    return{label:dateStr,isCurrent,isUrgent,isExpired,ms};
+  }
 }
 
 function dashSearch(){
