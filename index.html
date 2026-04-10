@@ -3044,6 +3044,7 @@ const DUE_DATES=[
   {id:'sp_m',casino:'southpoint',name:'South Point',type:'monthly',dom:25,hour:17,min:0,label:'25th of each month'},
   {id:'silv_m',casino:'silverton',name:'Silverton',type:'monthly',dom:27,hour:17,min:0,label:'27th of each month'},
   {id:'vene_m',casino:'venetian',name:'The Venetian',type:'monthly',dom:27,hour:17,min:0,label:'27th of each month'},
+  {id:'wynn_m',casino:'wynn',name:'Wynn MTH',type:'monthly',dom:27,hour:17,min:0,label:'27th of each month'},
 ];
 
 function getPST(){
@@ -3920,7 +3921,7 @@ function rDash(){
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       Casino Bid Overview
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px">
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:7px">
       ${[...DB.casinos].sort((a,b)=>a.name.localeCompare(b.name)).map(casino=>{
         const totalItems=(casino.cats||[]).reduce((n,cat)=>n+gI(casino.id,cat).length,0);
         const pricedItems=(casino.cats||[]).reduce((n,cat)=>n+gI(casino.id,cat).filter(it=>getLastBid(casino.id,cat,it.item)!=null).length,0);
