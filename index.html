@@ -175,7 +175,7 @@ input:focus,select:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 
 .pgsz{padding:4px 7px;border-radius:5px;border:1px solid var(--bd2);font-size:11px;background:var(--bg2);color:var(--tx);cursor:pointer}
 /* ── Sticky controls bar ── */
 .sticky-tabs{position:sticky;top:0;z-index:31;background:#fff;padding:4px 0 4px;border-bottom:1px solid var(--bd)}
-.sticky-ctrl{position:sticky;top:var(--sticky-tabs-h,0px);z-index:30;background:#fff;padding:6px 0 4px;margin-bottom:8px;border-bottom:1px solid var(--bd)}
+.sticky-ctrl{position:sticky;top:var(--sticky-tabs-h,0px);z-index:30;background:#fff;padding:6px 0 4px;margin-bottom:8px;border-bottom:1px solid var(--bd);box-shadow:0 -20px 0 0 #fff,0 -40px 0 0 #fff}
 /* ── Filter bar ── */
 .fbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:7px 0;margin-bottom:8px}
 .ftag{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;border:1.5px solid var(--bd2);cursor:pointer;font-size:11px;font-weight:600;background:#fff;color:var(--tx2);transition:.12s;white-space:nowrap}
@@ -348,11 +348,6 @@ tr:hover .del-row{opacity:1}
 .bell-footer{padding:8px 14px;border-top:1px solid var(--bd);background:var(--bg3)}
 /* Status dropdown */
 .bid-status{padding:3px 7px;border-radius:5px;border:1px solid var(--bd2);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;background:var(--bg2);color:var(--tx);width:100%;min-width:130px}
-.st-working{background:#e6f1fb;color:#0c447c;border-color:#b5d4f4}
-.st-pending{background:#faeeda;color:#7a4500;border-color:#f5c87a}
-.st-submitted{background:var(--gl);color:#0f6e56;border-color:#b5dda0}
-.st-closed{background:var(--rl);color:var(--red);border-color:#f7c1c1}
-.st-admin{background:#f1efe8;color:#4a4a4a;border-color:#c8c8c8}
 /* Due dates table */
 .dd-table-wrap{border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
 .dd-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
@@ -435,20 +430,22 @@ tr:hover .del-row{opacity:1}
 .an-toggle{display:flex;border:1px solid var(--bd);border-radius:6px;overflow:hidden}
 .an-tog-btn{border:none;background:#fff;padding:6px 18px;font-size:12px;font-weight:600;color:var(--tx2);cursor:pointer;transition:.15s}
 .an-tog-btn:hover{background:var(--bg3)}.an-tog-btn.on{background:var(--navy);color:#fff}
-.an-casino-hd{font-size:16px;font-weight:700;color:var(--tx2);margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid var(--bd)}
+.an-casino-hd{font-size:16px;font-weight:700;color:var(--tx2);margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:12px}
 .an-period{background:#fff;border:1px solid var(--bd);border-radius:var(--rl2);padding:20px;margin-bottom:20px;box-shadow:var(--sh)}
 .an-period-hd{display:flex;align-items:center;margin-bottom:16px;gap:8px;flex-wrap:wrap}
 .an-period-lbl{font-size:14px;font-weight:700;color:var(--navy)}
 .an-total{margin-left:auto;font-size:11px;color:var(--tx3);font-weight:600;background:var(--bg3);border:1px solid var(--bd);padding:3px 10px;border-radius:20px}
-.an-body{display:flex;gap:28px;align-items:center;flex-wrap:wrap}
-.an-chart-wrap{flex-shrink:0;width:200px;height:200px;position:relative}
-.an-stats{display:flex;flex-direction:column;gap:16px;flex:1;min-width:200px}
-.an-stat{display:flex;gap:12px;align-items:flex-start}
-.an-stat-dot{width:13px;height:13px;border-radius:50%;flex-shrink:0;margin-top:4px}
-.an-stat-val{font-size:24px;font-weight:800;color:var(--tx);line-height:1}
-.an-pct{font-size:13px;font-weight:600;color:var(--tx3);margin-left:2px}
-.an-stat-lbl{font-size:12px;font-weight:700;color:var(--tx2);margin-top:3px}
-.an-stat-sub{font-size:11px;color:var(--tx3)}
+.an-body{display:flex;gap:24px;align-items:stretch;flex-wrap:nowrap}
+.an-left{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:12px}
+.an-chart-wrap{flex-shrink:0;width:180px;height:180px;position:relative}
+.an-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;width:100%}
+.an-topitems-wrap{flex:1;min-width:0;border-left:1.5px solid var(--bg3);padding-left:20px;display:flex;flex-direction:column;height:280px}
+.an-stat{display:flex;gap:8px;align-items:flex-start}
+.an-stat-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.an-stat-val{font-size:18px;font-weight:800;color:var(--tx);line-height:1}
+.an-pct{font-size:11px;font-weight:600;color:var(--tx3);margin-left:2px}
+.an-stat-lbl{font-size:11px;font-weight:700;color:var(--tx2);margin-top:2px}
+.an-stat-sub{font-size:9.5px;color:var(--tx3);line-height:1.3}
 .an-insight{background:var(--bg3);border-left:4px solid var(--navy);border-radius:0 8px 8px 0;padding:11px 15px;font-size:12px;color:var(--tx2);margin-top:18px;line-height:1.7}
 .an-empty{color:var(--tx3);font-size:13px;padding:24px;text-align:center;background:var(--bg3);border-radius:var(--r);border:1px dashed var(--bd)}
 .an-last-calc{font-size:11px;color:var(--tx3);align-self:flex-end;padding-bottom:4px}
@@ -545,7 +542,7 @@ const CW=WK.length-1;
 // ── LOCAL DB ──
 let DB={
   casinos:[{id:'rwlv',name:'Resorts World Las Vegas',short:'RWLV',city:'Las Vegas, NV',cats:CL}],
-  items:{},lps:{},bidH:{},newB:{},impBH:{},delItems:{},alertsSent:{},bidStatus:{},_notifs:[],_users:[],_ddStatus:{},
+  items:{},lps:{},qbeRows:{},bidH:{},newB:{},impBH:{},delItems:{},alertsSent:{},bidStatus:{},_notifs:[],_users:[],
   periods:[
     {id:'p0',lbl:'Weekly 03/22',dt:'03/22/26',data:{}},
     {id:'p1',lbl:'Weekly 03/15',dt:'03/15/26',data:{}},
@@ -633,55 +630,6 @@ setTimeout(()=>sbLoad(true), 500);
 // Background poll every 60s — never triggers render (no scroll reset, no lost work)
 setInterval(()=>{if(SB)sbLoad(false);}, 60000);
 
-// Seed RWLV Asian from casino sheet (exact order)
-(function seed(){
-  if((DB.items['rwlv|Asian']||[]).length>0)return;
-  DB.items['rwlv|Asian']=[
-    {item:'B31400003',desc:'SAKE COOKING (JAPAN) 18L/PACK HAKUSHIKA BEV000132',unit:'PK',hkm:''},
-    {item:'B31400004',desc:'WINE SHAO XING GWCSH2 12/750 ML/CS WIN000000001702',unit:'CS',hkm:'GWCSH2'},
-    {item:'B31400012',desc:'WINE COOKING SHAOXING 1-GAL 4CT/CSE SUPREME 15908008',unit:'CS',hkm:'GWCSH3L'},
-    {item:'B33800100',desc:'SAKE COOKING (HYOGO JAPAN) 4-3L/CS HAKUSHIKA TANUKI 500056',unit:'CS',hkm:''},
-    {item:'B44000079',desc:'CREAM COCONUT 1L 12CT/CASE KARA 8886303211006',unit:'CS',hkm:'GMCK'},
-    {item:'B49000023',desc:'WATER ROSE 12.7OZ 12CT/CASE SADAF 52851859108',unit:'CS',hkm:''},
-    {item:'F13000010',desc:'EGG QUAIL UZURA 10CT/PK DAI000234',unit:'PK',hkm:'GEQUZ'},
-    {item:'F14000011',desc:'MOCHI MINI RAINBOW RICE CAKE 25-300GM/CASE TEA ZONE',unit:'CS',hkm:''},
-    {item:'F15000009',desc:'MILK COCONUT AROY-D FOR DESSERT 24-14OZ/CS DAI000354',unit:'CS',hkm:'GMCA'},
-    {item:'F21000004',desc:'SOUP INSTANT NOODLE ORIENTAL UDON BOWL 6-5.6OZ/CS MYOJO',unit:'CS',hkm:''},
-    {item:'F21000019',desc:'BASE SOMI TONKOTSU RAMEN SOUP 2.2#/BAG LVMT 23114',unit:'BAG',hkm:''},
-    {item:'F21000027',desc:'PASTE TOM YUM INSTANT 24-8OZ/CASE SIAM SELECT',unit:'CS',hkm:''},
-    {item:'F21000033',desc:'RED BEAN PASTE 20KG/CS GDF0027',unit:'CS',hkm:''},
-    {item:'F21000062',desc:'PASTE MAEPOLY CURRY MASAMAN GPCMM 12/35OZ/CS',unit:'CS',hkm:''},
-    {item:'F21400018',desc:'BUN BAO FOLDED FRZN 22-12PK/CS FRZ000192',unit:'CS',hkm:''},
-    {item:'F21600018',desc:'CANDY HELLO PANDA CHOCOLATE 2OZ 8-10CT/CASE MEIJI',unit:'CS',hkm:''},
-    {item:'F21800003',desc:'PICKLED PLUM IN BRINE 24-12OZ/CS KOON CHUN',unit:'CS',hkm:''},
-    {item:'F21800004',desc:'LYCHEE PITTED IN SYRUP 24-20OZ/CASE AMBROSIA',unit:'CS',hkm:''},
-    {item:'F21800064',desc:'LYCHEE ROLAND FOODS WHOLE IN SYRUP 90010 24/20OZ/CS',unit:'CS',hkm:''},
-    {item:'F22000019',desc:'MUSHROOM SHITAKE DRIED 3-4 CM 6-5#/CS PRO000789',unit:'CS',hkm:''},
-    {item:'F22000072',desc:'MUSHROOM DRIED SHIITAKE 5#/PACK CJ FOODS',unit:'PK',hkm:''},
-    {item:'F22000099',desc:'PICKLED CABBAGE KIM CHEE 4-1GAL/CS DAEWON FOOD',unit:'CS',hkm:''},
-    {item:'F22000131',desc:'MUSHROOM DIN HOW STRAW 11811 6-#10CAN/CS',unit:'CS',hkm:''},
-    {item:'F22000140',desc:'RADISH WONG PAI CHILI 10010612 24/13OZ/CS',unit:'CS',hkm:''},
-    {item:'F22000141',desc:'BAMBOO SHOOT WONG PAI CHILI 10010617 24/13OZ/CS',unit:'CS',hkm:''},
-    {item:'F22000147',desc:'GARLIC BEST FRIED 10062862 14OZ/EA',unit:'EA',hkm:''},
-    {item:'F22800015',desc:'SAUCE SRIRACHA PC 9GR 400CT/CASE SPICE WORLD',unit:'CS',hkm:''},
-    {item:'F22800045',desc:'SAUCE SOY BLACK ORANGE 33OZ 12CT/CASE HEALTHY BOY',unit:'CS',hkm:''},
-    {item:'F22800046',desc:'SAUCE SOY THIN 12-23OZ/CS HEALTHY BOY',unit:'CS',hkm:''},
-    {item:'F22800053',desc:'SAUCE SOY RED CAP SWEET KETJAP 33OZ 9CT/CASE',unit:'CS',hkm:''},
-    {item:'F22800064',desc:'SAUCE SOY LOW SODIUM 64OZ 6/CT CASE KIKKOMAN',unit:'CS',hkm:''},
-    {item:'F22800065',desc:'SAUCE SOY SWEET GREEN CAP KETJAP 1-LITER 6CT/CASE',unit:'CS',hkm:''},
-    {item:'F23000056',desc:'DASHI KONBU MARUKYO 24-1#/CS GRO000000000141',unit:'CS',hkm:''},
-    {item:'F23000111',desc:'WONTON SKIN YUAN-TEN 10-4LB/CS SUNFOOD MARKET DS065',unit:'CS',hkm:''},
-    {item:'F23000131',desc:'SEED DIPASA SESAME ROASTED IRI SHIRO GOMA 6-5#/CS',unit:'CS',hkm:''},
-    {item:'F23000132',desc:'SHIRAGIKU SU GREEN MZKN 5.28 GAL',unit:'TUB',hkm:''},
-    {item:'F23000166',desc:'CRACKER HAPI RICE GF YAKI MOCHI CRISPY PUFFED 12/3OZ/CS',unit:'CS',hkm:''},
-    {item:'F23000167',desc:'WRAPPER WONTON YELLOW 12-14OZ/CS',unit:'CS',hkm:''},
-    {item:'F23200035',desc:'OIL PEANUT 3-LITER 6CT/CASE LION 4898833500752',unit:'CS',hkm:''},
-  ];
-  dbSave();
-  if(!DB._openC)DB._openC={};
-  DB._openC['rwlv']=true;
-})();
-
 // ── STATE ──
 const S={
   view:'dashboard',casino:null,cat:null,
@@ -715,7 +663,6 @@ const ldH=d=>{
 const gI=(cid,cat)=>DB.items[`${cid}|${cat}`]||[];
 const gL=(cid,item,hkm)=>{if(hkm&&hkm.trim()){const v=DB.lps[`${cid}|${hkm.trim()}`];if(v&&Object.keys(v).length)return v;}return DB.lps[`${cid}|${item}`]||{};};
 const gH=(cid,cat,item)=>DB.bidH[`${cid}|${cat}|${item}`]||new Array(WK.length).fill(null);
-const sH=(cid,cat,item,arr)=>{DB.bidH[`${cid}|${cat}|${item}`]=arr;dbSave();};
 const sal=(id,msg,t='ok',ms=4000)=>{
   const el=document.getElementById(id);if(!el)return;
   el.textContent=msg;el.className=`al a-${t} show`;
@@ -773,7 +720,7 @@ function render(){
   const mainScrollY=el.scrollTop;
   const twh=el.querySelector('.twh');
   const twhScrollX=twh?twh.scrollLeft:0;
-  const fn={dashboard:rDash,casino:rCasino,bids:rBids,upload:rUpload,bidoverview:rBidOverview,analytics:rAnalytics,analyticsDetail:rAnalyticsDetail};
+  const fn={dashboard:rDash,casino:rCasino,bids:rBids,upload:rUpload,bidoverview:rBidOverview,analytics:rAnalytics,analyticsDetail:rAnalyticsDetail,itemPurchaseDetail:rItemPurchaseDetail,purchaseHistory:rPurchaseHistory};
   el.innerHTML=(fn[S.view]||rDash)();
   // Restore scroll positions after render
   el.scrollTop=mainScrollY;
@@ -801,6 +748,10 @@ function updateHash(){
     h='analytics/'+(S.anCasino||'')+'/'+(S.anPeriod||'');
   }else if(S.view==='analyticsDetail'){
     h='analyticsDetail/'+(S.anDrillCid||'')+'/'+(S.anDrillPeriod||'')+'/'+(S.anDrillSegment||'');
+  }else if(S.view==='itemPurchaseDetail'){
+    h='itemPurchaseDetail/'+(S.anDrillCid||'')+'/'+(S.anItemDrillHkm||'');
+  }else if(S.view==='purchaseHistory'){
+    h='purchaseHistory/'+(S.anDrillCid||'');
   }
   history.replaceState(null,'','#'+h);
 }
@@ -830,6 +781,14 @@ function restoreFromHash(){
     S.view='analyticsDetail';
     S.anDrillCid=p[1];S.anDrillPeriod=p[2]||'weekly';S.anDrillSegment=p[3];
     S.anCasino=p[1]; // keep parent casino selected too
+  }else if(p[0]==='itemPurchaseDetail'&&p[1]&&p[2]){
+    S.view='itemPurchaseDetail';
+    S.anDrillCid=p[1];S.anItemDrillHkm=decodeURIComponent(p[2]);
+    S.anCasino=p[1];
+  }else if(p[0]==='purchaseHistory'&&p[1]){
+    S.view='purchaseHistory';
+    S.anDrillCid=p[1];
+    S.anCasino=p[1];
   }
 }
 
@@ -867,7 +826,7 @@ function rSB(){
       h+=`<div class="sb-add" onclick="nav('upload',{uTab:'addbid'})">+ Add Bid Category</div>`;
     }
   });
-  h+=`<div class="sb-add" style="padding-left:14px;margin-top:4px" onclick="nav('upload',{uTab:'addbid'})">+ Add Casino</div>`;
+  if(DB._isAdmin)h+=`<div class="sb-add" style="padding-left:14px;margin-top:4px" onclick="nav('upload',{uTab:'addbid'})">+ Add Casino</div>`;
   el.innerHTML=h;
 }
 function sbToggle(cid){
@@ -877,12 +836,14 @@ function sbToggle(cid){
 }
 function sbCtxCasino(e,cid){
   e.preventDefault();
+  if(!DB._isAdmin)return;
   const casino=DB.casinos.find(c=>c.id===cid);
   if(!casino)return;
   showSbCtxMenu(e,'casino',cid,'',casino.name);
 }
 function sbRenameCat(e,cid,cat){
   e.preventDefault();
+  if(!DB._isAdmin)return;
   showSbCtxMenu(e,'cat',cid,cat,cat);
 }
 function showSbCtxMenu(e,type,cid,cat,name){
@@ -915,6 +876,7 @@ function openSbRenameModal(){
   setTimeout(()=>{const inp=document.getElementById('sb-rename-input');inp.focus();inp.select();},100);
 }
 function confirmSbRename(){
+  if(!DB._isAdmin)return;
   const modal=document.getElementById('sb-rename-modal');
   const type=modal.dataset.type,cid=modal.dataset.cid,cat=modal.dataset.cat;
   const val=(document.getElementById('sb-rename-input').value||'').trim();
@@ -951,6 +913,7 @@ function openSbDeleteModal(){
   setTimeout(()=>document.getElementById('sb-delete-input').focus(),100);
 }
 function confirmSbDelete(){
+  if(!DB._isAdmin)return;
   const val=(document.getElementById('sb-delete-input').value||'').trim().toLowerCase();
   if(val!=='delete'){document.getElementById('sb-delete-err').textContent='Type "delete" exactly to confirm.';return;}
   const modal=document.getElementById('sb-delete-modal');
@@ -1224,7 +1187,7 @@ ${(!DB.periods||!DB.periods.some(p=>Object.keys(p.data||{}).length>0))?`<div cla
     <b>Proj Margin</b> uses Period A cost
   </div>
 </div>
-<div style="display:flex;gap:8px;margin-bottom:0;flex-wrap:wrap;align-items:center">
+${DB._isAdmin?`<div style="display:flex;gap:8px;margin-bottom:0;flex-wrap:wrap;align-items:center">
   <button class="btn-act" onclick="runAutoPrice()">AUTOMATE BID</button>
   <button class="btn-act" onclick="openPasteModal()">PASTE BID PRICES</button>
   <button class="btn-act btn-act-gold" onclick="copyDraftBid()">COPY BID PRICES</button>
@@ -1236,7 +1199,10 @@ ${(!DB.periods||!DB.periods.some(p=>Object.keys(p.data||{}).length>0))?`<div cla
     <button class="btn btn-sm" style="font-weight:700;padding:6px 14px;border:1.5px solid var(--navy);color:var(--navy)" onclick="saveDraft()">SAVE DRAFT</button>
     <button class="btn btn-gd btn-sm" style="font-weight:800;letter-spacing:.5px;padding:6px 16px" onclick="saveBid()">SUBMIT BID</button>
   </div>
-</div>
+</div>`:`<div style="display:flex;align-items:center;gap:8px;margin-bottom:0">
+  <button class="btn-act btn-act-gold" onclick="copyDraftBid()">COPY BID PRICES</button>
+  <span style="font-size:11px;color:var(--tx3);margin-left:auto">View only — contact admin to submit bids</span>
+</div>`}
 </div>
 <div id="draft-al" class="al" style="margin-bottom:10px"></div>
 <div class="tw twh"><table><thead><tr>
@@ -1303,7 +1269,7 @@ ${(()=>{
     <td class="pr">${lb!=null?'$'+f(lb):'<span class="nc">—</span>'}</td>
     <td class="nr">${mgH(mg(lb,ac))}</td>
     ${(()=>{const sig=calcSignal(lps,lb);const ac=sig.action;const col=ac==='INCREASE'?'#0f6e56':ac==='DECREASE'?'#a32d2d':'#374151';return`<td style="font-size:11px;font-weight:700;text-align:center;color:${col};background:#f8f8ff">${ac}</td><td style="font-size:10px;color:var(--tx2);background:#f8f8ff">${sig.demandClass||'—'}</td>`;})()}
-    <td class="nbc nr"><input class="nbi" type="number" style="width:90px" step="0.01" placeholder="${lb?f(lb):''}" value="${DB.newB[nk]||''}" data-k="${nk}" data-ac="${ac||''}" data-lb="${lb||''}" data-i="${idx}" oninput="onBI(this)"></td>
+    <td class="nbc nr"><input class="nbi" type="number" style="width:90px" step="0.01" placeholder="${lb?f(lb):''}" value="${DB.newB[nk]||''}" data-k="${nk}" data-ac="${ac||''}" data-lb="${lb||''}" data-i="${idx}" oninput="onBI(this)"${DB._isAdmin?'':' disabled title="View only — admin access required"'}></td>
     <td class="nbc nr" id="nm${idx}">${mgH(mg(nv,ac))}</td>
     <td class="nbc nr" id="nd${idx}">${dH(nv,lb)}</td>
     <td class="nbc"><button class="del-row" onclick="delRow('${S.casino.id}|${S.cat}','${it.item}')">✕</button></td>
@@ -1314,6 +1280,7 @@ ${(()=>{
 </tbody></table></div>${(()=>{const _pgk='db_'+S.casino.id+'_'+S.cat;return rPgBar(doPg(its,_pgk),_pgk);})()}`;}
 
 function onBI(el){
+  if(!DB._isAdmin)return;
   const k=el.dataset.k,ac=parseFloat(el.dataset.ac)||null,lb=parseFloat(el.dataset.lb)||null,i=el.dataset.i;
   DB.newB[k]=el.value===''?undefined:el.value;dbSave();
   const nv=el.value?parseFloat(el.value):null;
@@ -1411,6 +1378,7 @@ function twkKeepDrop(id,checked){
 function selWk(n){S.selW.clear();WK.slice(-Math.min(n,WK.length)).forEach(w=>S.selW.add(w.id));render();}
 
 function delPeriod(id){
+  if(!DB._isAdmin)return;
   DB.periods=(DB.periods||[]).filter(p=>p.id!==id);
   dbSave();
   render();
@@ -1552,6 +1520,7 @@ function rLocked(msg='You do not have access to this feature.'){
 
 // ── UPLOAD HUB ──
 function rUpload(){
+  if(!DB._isAdmin)return rLocked('Only admins can access the Upload Hub. Contact your administrator for data uploads.');
   const tabs=[{id:'qbe',l:'1 QBE Purchase History'},{id:'pl',l:'2 QB Price List'},{id:'casino',l:'3 Casino Sheet'},{id:'addbid',l:'4 Add Category / Casino'},{id:'import',l:'5 Import Master Files'}];
   return`
 <div style="margin-bottom:18px">
@@ -1704,6 +1673,7 @@ function rUCasino(){return`
 
 // 1. QBE — runs same logic as Power Queries
 function hQBE(inp){
+  if(!DB._isAdmin)return;
   const file=inp.files[0];if(!file)return;
   const cid=document.getElementById('qcas').value;
   sProg('qbe');
@@ -1735,6 +1705,8 @@ function hQBE(inp){
         const colItem=fndHdr('item','itemcode','itemno','sku','part','product')||'Item';
         const colPrice=fndHdr('salesprice','unitprice','price')||'Sales Price';
         const colAmount=fndHdr('amount','total','lineamount','extamount')||'Amount';
+        const colFob=fndHdr('fob','department','dept','ship','shipto')||null;
+        const colQty=fndHdr('qty','quantity','qtyordered','qtyshipped')||null;
         const parsed=res.data.map(r=>{
           const rawItem=String(r[colItem]||r['Item']||r['item']||r['ITEM']||'').trim();
           // QB exports items as "GWCSH2:Wine Shao Xing..." — split on whitespace, comma, or colon
@@ -1759,11 +1731,54 @@ function hQBE(inp){
           }
           const price=parseFloat(r[colPrice]||r['Sales Price']||r['Price']||0)||null;
           const amount=parseFloat(r[colAmount]||r['Amount']||0)||0;
+          const fob=colFob?String(r[colFob]||'').trim():'';
+          const qty=colQty?parseFloat(r[colQty]||0)||0:null;
           return{code,dt,valid:!isNaN(dt.getTime())&&code&&code.length>2,
-            num:parseFloat(r[colNum]||r['Num']||0)||0,price,amount};
+            num:parseFloat(r[colNum]||r['Num']||0)||0,price,amount,fob,qty};
         }).filter(r=>r.valid);
+        // Normalize FOB names — QB truncates names and encoders may typo (e.g. "ASHING POTATO"="WASHING POTAT", "\IN ROOM DINI"="IN ROOM DINI")
+        if(colFob){
+          const cleanFob=s=>s.replace(/^[^a-zA-Z0-9]+/,'').trim().toUpperCase();
+          const bigrams=s=>{const b=[];for(let i=0;i<s.length-1;i++)b.push(s.slice(i,i+2));return b;};
+          const fobSim=(a,b)=>{
+            const ca=cleanFob(a),cb=cleanFob(b);
+            if(ca===cb)return 1;
+            if(ca.length>=5&&cb.length>=5&&(ca.includes(cb)||cb.includes(ca)))return 0.92;
+            const ba=bigrams(ca),bb=bigrams(cb);
+            if(!ba.length||!bb.length)return 0;
+            const set=new Set(ba);
+            const common=bb.filter(x=>set.has(x)).length;
+            return(2*common)/(ba.length+bb.length);
+          };
+          const fobCounts={};
+          parsed.forEach(r=>{if(r.fob)fobCounts[r.fob]=(fobCounts[r.fob]||0)+1;});
+          // Also clean leading special chars immediately
+          parsed.forEach(r=>{if(r.fob)r.fob=r.fob.replace(/^[^a-zA-Z0-9]+/,'').trim();});
+          // Recount after cleaning
+          const fobCounts2={};
+          parsed.forEach(r=>{if(r.fob)fobCounts2[r.fob]=(fobCounts2[r.fob]||0)+1;});
+          const fobNames=[...new Set(parsed.map(r=>r.fob).filter(Boolean))].sort((a,b)=>(fobCounts2[b]||0)-(fobCounts2[a]||0));
+          // Build groups: each name maps to its canonical (most frequent similar name)
+          const fobMap={};
+          const groups=[];
+          for(const name of fobNames){
+            if(fobMap[name])continue;
+            // Find all names similar to this one
+            const group=[name];
+            for(const other of fobNames){
+              if(other===name||fobMap[other])continue;
+              if(fobSim(name,other)>=0.65)group.push(other);
+            }
+            // Canonical = the one with highest count
+            const canonical=group.sort((a,b)=>(fobCounts2[b]||0)-(fobCounts2[a]||0))[0];
+            group.forEach(g=>{fobMap[g]=canonical;});
+            groups.push({canonical,members:group});
+          }
+          parsed.forEach(r=>{if(r.fob&&fobMap[r.fob])r.fob=fobMap[r.fob];});
+        }
         const grp={};
         parsed.forEach(r=>{if(!grp[r.code])grp[r.code]=[];grp[r.code].push(r);});
+        if(!DB.qbeRows)DB.qbeRows={};
         let n=0;
         Object.entries(grp).forEach(([code,rows])=>{
           const latest=rows.sort((a,b)=>b.dt-a.dt||b.num-a.num)[0];
@@ -1777,8 +1792,29 @@ function hQBE(inp){
             v30:rows.filter(r=>r.dt>=d30).length,
             v7:rows.filter(r=>r.dt>=d7).length,
             rev365:Math.round(rows.filter(r=>r.dt>=d365).reduce((s,r)=>s+r.amount,0)*100)/100,
-          };n++;
+          };
+          // Store raw purchase rows for drill-down (date as ISO string for JSON serialization)
+          DB.qbeRows[`${cid}|${code}`]=rows.map(r=>({
+            dt:r.dt.toISOString(),
+            fob:r.fob,
+            price:r.price,
+            amount:r.amount,
+            num:r.num,
+            qty:r.qty
+          }));
+          n++;
         });
+        // Auto-prune qbeRows older than 15 months to keep DB size manageable (free tier)
+        const pruneDate=new Date();pruneDate.setMonth(pruneDate.getMonth()-15);
+        const pruneISO=pruneDate.toISOString();
+        let pruned=0;
+        Object.keys(DB.qbeRows).forEach(key=>{
+          const before=DB.qbeRows[key].length;
+          DB.qbeRows[key]=DB.qbeRows[key].filter(r=>r.dt>=pruneISO);
+          pruned+=(before-DB.qbeRows[key].length);
+          if(!DB.qbeRows[key].length)delete DB.qbeRows[key];
+        });
+        if(pruned)console.log(`Pruned ${pruned} purchase records older than 15 months.`);
         dbSave();hProg('qbe');
         if(n===0){
           sal('qa',`⚠ No items matched. Detected headers: ${hdrs.slice(0,8).join(', ')}. Expected columns: Date, Item (or Item Code), Sales Price, Amount.`,'wn',0);
@@ -1814,6 +1850,7 @@ function autoFillPL(inp){
 
 // 2. QB Price List — shift and load
 function hPL(inp){
+  if(!DB._isAdmin)return;
   const file=inp.files[0];if(!file)return;
   const bidType=(document.getElementById('plbt').value.trim()||'WEEKLY').toUpperCase();
   const dateVal=document.getElementById('pll').value.trim()||tdl();
@@ -1970,6 +2007,7 @@ function updCCat(){
   }
 }
 function hCasino(inp){
+  if(!DB._isAdmin)return;
   const file=inp.files[0];if(!file)return;
   S._ucCas=document.getElementById('ccas').value;
   S._ucCat=document.getElementById('ccat').value;
@@ -2010,6 +2048,7 @@ function copyBid(){
 }
 
 function saveBid(){
+  if(!DB._isAdmin){toast('Only admins can submit bids.','er','Access Denied');return;}
   const fromEl=document.getElementById('eff-from');
   const toEl=document.getElementById('eff-to');
   if(!fromEl||!toEl||!fromEl.value||!toEl.value){
@@ -2044,6 +2083,7 @@ function saveBid(){
 }
 
 function saveDraft(){
+  if(!DB._isAdmin){toast('Only admins can save drafts.','er','Access Denied');return;}
   const its=gI(S.casino.id,S.cat);
   const n=its.filter(it=>DB.newB[`${S.casino.id}|${S.cat}|${it.item}`]).length;
   if(n===0){sal('bal','No draft prices to save. Run Automate Bid or enter prices in the New Bid ★ column first.','wn',0);toast('No draft prices found. Enter prices in the New Bid ★ column first.','wn','Nothing to Save');return;}
@@ -2131,6 +2171,7 @@ function rUAddBid(){
 }
 
 function hAddBid(inp){
+  if(!DB._isAdmin)return;
   const file=inp.files[0];if(!file)return;
   const cid=document.getElementById('ab-cas').value;
   let cat=document.getElementById('ab-cat').value;
@@ -2157,6 +2198,7 @@ function hAddBid(inp){
 }
 
 function hAddCasino(){
+  if(!DB._isAdmin){toast('Only admins can add casinos.','er','Access Denied');return;}
   const name=(document.getElementById('nc-name').value||'').trim();
   const short=(document.getElementById('nc-short').value||'').trim().toUpperCase();
   const city=(document.getElementById('nc-city').value||'').trim();
@@ -2180,6 +2222,7 @@ function hAddCasino(){
 
 // ── PASTE FROM MANAGER EXCEL ──
 function openPasteModal(){
+  if(!DB._isAdmin){toast('Only admins can paste bid prices.','er','Access Denied');return;}
   document.getElementById('paste-area').value='';
   document.getElementById('paste-al').className='al';
   const m=document.getElementById('paste-modal');
@@ -2385,6 +2428,7 @@ function calcSignal(lps, lastBid) {
 // Main auto-price function — fills DB.newB for all items in current category
 // Follows SOP v5.1: Cost Delta → Activity Gate → QB Check → Demand Signal → Decrease Gate → Step → Margin Floor
 function runAutoPrice() {
+  if(!DB._isAdmin){toast('Only admins can automate bid prices.','er','Access Denied');return;}
   const its = gI(S.casino.id, S.cat);
   const pa  = DB.periods[S.cA] || DB.periods[0];  // Period A = current cost
   const pb  = DB.periods[S.cB] || DB.periods[1];  // Period B = previous cost
@@ -2653,6 +2697,7 @@ function rUImport(){
 
 // ── IMPORT BID HISTORY ──
 function importBidMaster(file){
+  if(!DB._isAdmin)return;
   if(!file)return;
   const CASINO_MAP={RWLV:'rwlv',WYNN:'wynn',FBLV:'fblv',STATION:'stations',
     VENETIAN:'venetian',CAESARS:'caesars',BOYD:'boyd',SILV:'silverton',
@@ -2871,6 +2916,7 @@ function importBidMaster(file){
 
 // ── IMPORT PRICE LIST MASTER ──
 function importPriceListMaster(file){
+  if(!DB._isAdmin)return;
   if(!file)return;
   sProg('pl2');
   const reader=new FileReader();
@@ -3054,6 +3100,7 @@ function _rExpBtn(id='exp-dd-tab'){
 
 // ── Delete Row ──
 function delRow(key, item){
+  if(!DB._isAdmin){toast('Only admins can delete items.','er','Access Denied');return;}
   if(!confirm('Remove this row from display?'))return;
   if(!DB.delItems)DB.delItems={};
   if(!DB.delItems[key])DB.delItems[key]=[];
@@ -3131,6 +3178,7 @@ function buildNotifItems(){
   }).join('');
 }
 function clearAllNotifs(){
+  if(!DB._isAdmin)return;
   DB._notifs=[];
   dbSave();rTR();
 }
@@ -3312,28 +3360,72 @@ function rTopItems(cid,allItems){
     .filter(it=>{if(!it.v365||seen.has(it.hkm))return false;seen.add(it.hkm);return true;})
     .sort((a,b)=>b.v365-a.v365)
     .slice(0,10);
-  if(!withVol.length)return`<div style="flex:1;min-width:180px;border-left:1.5px solid var(--bg3);padding-left:20px;display:flex;align-items:center;justify-content:center"><div style="font-size:12px;color:var(--tx3);text-align:center;line-height:1.8">No purchase volume data.<br>Upload QBE History to see top items.</div></div>`;
-  const maxV=withVol[0].v365;
-  const rows=withVol.map((it,i)=>{
-    const pct=maxV?Math.round(it.v365/maxV*100):0;
-    const bar=i===0?'var(--navy)':i<3?'var(--navy3)':'#b0c4de';
-    return`<div style="margin-bottom:9px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px">
-        <div style="font-size:11px;font-weight:800;color:var(--navy)">${it.hkm}</div>
-        <div style="font-size:10px;color:var(--tx3);white-space:nowrap">${it.v365}× /yr</div>
-      </div>
-      <div style="font-size:10px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;margin-bottom:3px" title="${it.desc.replace(/"/g,'&quot;')}">${it.desc}</div>
-      <div style="height:4px;background:var(--bg3);border-radius:2px"><div style="height:100%;width:${pct}%;background:${bar};border-radius:2px"></div></div>
-    </div>`;
-  }).join('');
-  return`<div style="flex:1;min-width:180px;border-left:1.5px solid var(--bg3);padding-left:20px">
+  if(!withVol.length)return`<div class="an-topitems-wrap" style="align-items:center;justify-content:center"><div style="font-size:12px;color:var(--tx3);text-align:center;line-height:1.8">No purchase volume data.<br>Upload QBE History to see top items.</div></div>`;
+  const chartId=`topitems-${cid}-${Date.now()}`;
+  window._topItemsData=window._topItemsData||{};
+  window._topItemsData[chartId]={cid,items:withVol};
+  return`<div class="an-topitems-wrap">
     <div style="font-size:12px;font-weight:800;color:var(--navy);margin-bottom:4px;display:flex;align-items:center;gap:6px">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
       Top Ordered Items
     </div>
-    <div style="font-size:10px;color:var(--tx3);margin-bottom:12px">Ranked by 365-day purchase frequency (QBE data)</div>
-    ${rows}
+    <div style="font-size:10px;color:var(--tx3);margin-bottom:6px">Ranked by 365-day purchase frequency (QBE data)</div>
+    <div style="flex:1;min-height:0;position:relative"><canvas id="${chartId}" style="position:absolute;top:0;left:0;width:100%;height:100%"></canvas></div>
   </div>`;
+}
+function initTopItemsChart(chartId){
+  const canvas=document.getElementById(chartId);
+  if(!canvas||!window.Chart||!window._topItemsData||!window._topItemsData[chartId])return;
+  const existing=Chart.getChart(canvas);
+  if(existing)existing.destroy();
+  const chartData=window._topItemsData[chartId];
+  const cid=chartData.cid;
+  const items=chartData.items;
+  const labels=items.map(it=>it.hkm);
+  const descs=items.map(it=>it.desc);
+  const vals=items.map(it=>it.v365);
+  new Chart(canvas,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {type:'bar',label:'Orders/yr',data:vals,backgroundColor:'rgba(37,99,235,0.75)',borderColor:'rgba(37,99,235,1)',borderWidth:1,borderRadius:3,order:2,barPercentage:0.7,categoryPercentage:0.8},
+        {type:'line',label:'Trend',data:vals,borderColor:'#e67e22',backgroundColor:'rgba(230,126,34,0.15)',pointBackgroundColor:'#fff',pointBorderColor:'#e67e22',pointBorderWidth:1.5,pointRadius:3,pointHoverRadius:5,borderWidth:2,tension:0.3,fill:false,order:1}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      layout:{padding:{top:4,bottom:0,left:0,right:0}},
+      onClick:(evt,elements)=>{
+        if(!elements.length)return;
+        const i=elements[0].index;
+        S.anDrillCid=cid;
+        S.anItemDrillHkm=labels[i];
+        S.anItemDrillDesc=descs[i];
+        nav('itemPurchaseDetail');
+      },
+      onHover:(evt,elements)=>{
+        evt.native.target.style.cursor=elements.length?'pointer':'default';
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:9,weight:'bold'},color:'var(--navy)',maxRotation:45,minRotation:0}},
+        y:{beginAtZero:true,grid:{color:'rgba(0,0,0,0.06)'},ticks:{font:{size:9},color:'#888',stepSize:undefined,callback:v=>Number.isInteger(v)?v:''},title:{display:true,text:'orders / yr',font:{size:9},color:'#999'}}
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            title:ctx=>{const i=ctx[0].dataIndex;return labels[i]+' — '+descs[i]+' (click for details)';},
+            label:ctx=>ctx.dataset.type==='bar'?ctx.raw+'× / yr':''
+          },
+          titleFont:{size:11,weight:'bold'},bodyFont:{size:10},
+          backgroundColor:'rgba(20,40,80,0.92)',titleColor:'#fff',bodyColor:'#ddd',
+          padding:8,cornerRadius:6,displayColors:false,
+          maxWidth:280,titleMarginBottom:4
+        }
+      }
+    }
+  });
 }
 function rAnSection(cid,data,period,label,threshold){
   const{winning,losing,notOrdered,notBidding}=data;
@@ -3365,41 +3457,43 @@ function rAnSection(cid,data,period,label,threshold){
     <span class="an-total">${bidTotal} bid items · ${total} total</span>
   </div>
   <div class="an-body">
-    <div class="an-chart-wrap" style="display:flex;flex-direction:column;align-items:center;gap:6px">
-      <canvas id="chart-${cid}-${period}" width="200" height="200" style="cursor:pointer"></canvas>
-      <div style="font-size:10px;color:var(--tx3);text-align:center">👆 Click a segment to view items</div>
-    </div>
-    <div class="an-stats">
-      <div class="an-stat">
-        <div class="an-stat-dot" style="background:#1d9e75"></div>
-        <div>
-          <div class="an-stat-val">${winning.length}<span class="an-pct">${wp}%</span></div>
-          <div class="an-stat-lbl">Winning Items</div>
-          <div class="an-stat-sub">Ordered within last ${threshold} days · % of bid items</div>
-        </div>
+    <div class="an-left">
+      <div class="an-chart-wrap" style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <canvas id="chart-${cid}-${period}" width="180" height="180" style="cursor:pointer"></canvas>
+        <div style="font-size:9px;color:var(--tx3);text-align:center">Click a segment to view items</div>
       </div>
-      <div class="an-stat">
-        <div class="an-stat-dot" style="background:#c0392b"></div>
-        <div>
-          <div class="an-stat-val">${losing.length}<span class="an-pct">${lp}%</span></div>
-          <div class="an-stat-lbl">Losing Items</div>
-          <div class="an-stat-sub">Previously ordered, last purchase &gt;${threshold} days ago</div>
+      <div class="an-stats">
+        <div class="an-stat">
+          <div class="an-stat-dot" style="background:#1d9e75"></div>
+          <div>
+            <div class="an-stat-val">${winning.length}<span class="an-pct">${wp}%</span></div>
+            <div class="an-stat-lbl">Winning</div>
+            <div class="an-stat-sub">Last ${threshold}d</div>
+          </div>
         </div>
-      </div>
-      <div class="an-stat">
-        <div class="an-stat-dot" style="background:#e67e22"></div>
-        <div>
-          <div class="an-stat-val">${notOrdered.length}<span class="an-pct">${np}%</span></div>
-          <div class="an-stat-lbl">Not Ordered</div>
-          <div class="an-stat-sub">Has HKM code — we bid, but no purchase activity</div>
+        <div class="an-stat">
+          <div class="an-stat-dot" style="background:#c0392b"></div>
+          <div>
+            <div class="an-stat-val">${losing.length}<span class="an-pct">${lp}%</span></div>
+            <div class="an-stat-lbl">Losing</div>
+            <div class="an-stat-sub">&gt;${threshold}d ago</div>
+          </div>
         </div>
-      </div>
-      <div class="an-stat">
-        <div class="an-stat-dot" style="background:#95a5a6"></div>
-        <div>
-          <div class="an-stat-val">${notBidding.length}<span class="an-pct">${nbp}%</span></div>
-          <div class="an-stat-lbl">Not Bidding</div>
-          <div class="an-stat-sub">No HKM code — HKM does not bid on these items</div>
+        <div class="an-stat">
+          <div class="an-stat-dot" style="background:#e67e22"></div>
+          <div>
+            <div class="an-stat-val">${notOrdered.length}<span class="an-pct">${np}%</span></div>
+            <div class="an-stat-lbl">Not Ordered</div>
+            <div class="an-stat-sub">No purchases</div>
+          </div>
+        </div>
+        <div class="an-stat">
+          <div class="an-stat-dot" style="background:#95a5a6"></div>
+          <div>
+            <div class="an-stat-val">${notBidding.length}<span class="an-pct">${nbp}%</span></div>
+            <div class="an-stat-lbl">Not Bidding</div>
+            <div class="an-stat-sub">No HKM code</div>
+          </div>
         </div>
       </div>
     </div>
@@ -3478,15 +3572,16 @@ function rAnalytics(){
   </div>
   </div>
   <div class="an-content">`;
+  window._topItemsData={};
   if(pf==='weekly'||pf==='all'){
     if(hasW){
-      h+=`<div class="an-casino-hd">${casino.name} — <span style="color:var(--navy3)">Weekly Bids</span></div>`;
+      h+=`<div class="an-casino-hd"><span>${casino.name} — <span style="color:var(--navy3)">Weekly Bids</span></span><button class="btn-act" style="padding:5px 14px;font-size:11px" onclick="S.anDrillCid='${filterCid}';nav('purchaseHistory')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>PURCHASE HISTORY</button></div>`;
       h+=rAnSection(filterCid,weekly,'weekly','Weekly Bids',14);
     }
   }
   if(pf==='monthly'||pf==='all'){
     if(hasM){
-      h+=`<div class="an-casino-hd"${pf==='all'?' style="margin-top:28px"':''}>${casino.name} — <span style="color:var(--navy3)">Monthly Bids</span></div>`;
+      h+=`<div class="an-casino-hd"${pf==='all'?' style="margin-top:28px"':''}><span>${casino.name} — <span style="color:var(--navy3)">Monthly Bids</span></span><button class="btn-act" style="padding:5px 14px;font-size:11px" onclick="S.anDrillCid='${filterCid}';nav('purchaseHistory')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>PURCHASE HISTORY</button></div>`;
       h+=rAnSection(filterCid,monthly,'monthly','Monthly Bids',30);
     }
   }
@@ -3546,6 +3641,8 @@ function initAnCharts(cid,result,pf){
   }
   if((pf==='weekly'||pf==='all')&&result.weekly)makeChart(`chart-${cid}-weekly`,result.weekly,'weekly');
   if((pf==='monthly'||pf==='all')&&result.monthly)makeChart(`chart-${cid}-monthly`,result.monthly,'monthly');
+  // Init top items mixed charts
+  if(window._topItemsData){Object.keys(window._topItemsData).forEach(id=>{if(document.getElementById(id))initTopItemsChart(id);});}
 }
 
 function rAnalyticsDetail(){
@@ -3671,7 +3768,345 @@ function exportAnalyticsDetail(cid,period,segment,fmt='csv'){
   }
 }
 
+function rItemPurchaseDetail(){
+  const cid=S.anDrillCid,hkm=S.anItemDrillHkm;
+  if(!cid||!hkm){nav('analytics');return'';}
+  const casino=DB.casinos.find(c=>c.id===cid);
+  if(!casino){nav('analytics');return'';}
+  const desc=S.anItemDrillDesc||'';
+  const lp=DB.lps[`${cid}|${hkm}`]||{};
+  const rawRows=(DB.qbeRows||{})[`${cid}|${hkm}`]||[];
+  const fobFilter=S._itemDrillFob||'';
+  // Parse and sort by date descending
+  const allPurchases=rawRows.map(r=>({
+    dt:new Date(r.dt),
+    fob:r.fob&&r.fob.trim()?r.fob.trim():'No FOB',
+    price:r.price,
+    amount:r.amount,
+    num:r.num,
+    qty:r.qty
+  })).sort((a,b)=>b.dt-a.dt);
+  // FOB summary (from all, not filtered)
+  const fobMap={};
+  allPurchases.forEach(p=>{fobMap[p.fob]=(fobMap[p.fob]||0)+1;});
+  const fobSummary=Object.entries(fobMap).sort((a,b)=>b[1]-a[1]);
+  // Apply FOB filter
+  const purchases=fobFilter?allPurchases.filter(p=>p.fob===fobFilter):allPurchases;
+  const totalAmt=purchases.reduce((s,p)=>s+p.amount,0);
+  const totalQty=purchases.reduce((s,p)=>s+(p.qty||0),0);
+  const tRows=purchases.map((p,i)=>{
+    const dtStr=p.dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const priceStr=p.price!=null?'$'+parseFloat(p.price).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
+    const amtStr=p.amount?'$'+parseFloat(p.amount).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
+    const numStr=p.num?String(p.num):'—';
+    const qtyStr=p.qty!=null?p.qty:'—';
+    return`<tr>
+      <td style="color:var(--tx3);font-size:11px">${i+1}</td>
+      <td style="font-size:11px">${dtStr}</td>
+      <td style="font-size:11px;font-weight:600">${p.fob}</td>
+      <td style="font-size:11px;text-align:center">${qtyStr}</td>
+      <td style="font-size:11px;color:var(--green2);font-weight:600">${priceStr}</td>
+      <td style="font-size:11px">${amtStr}</td>
+      <td style="font-size:11px;color:var(--tx3)">${numStr}</td>
+    </tr>`;
+  }).join('');
+  const fobOpts=fobSummary.map(([f,c])=>`<option value="${f.replace(/"/g,'&quot;')}"${fobFilter===f?' selected':''}>${f}</option>`).join('');
+  return`
+<div class="sticky-ctrl">
+<div style="font-size:12px;color:var(--tx2);margin-bottom:10px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+  <span style="cursor:pointer;color:var(--tx3)" onclick="nav('analytics')">Analytics</span>
+  <span style="color:var(--bd2)">&rsaquo;</span>
+  <span style="cursor:pointer;color:var(--tx3)" onclick="S.anCasino='${cid}';nav('analytics')">${casino.name}</span>
+  <span style="color:var(--bd2)">&rsaquo;</span>
+  <span style="color:var(--navy);font-weight:700">${hkm}</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:0">
+  <div>
+    <div style="font-size:20px;font-weight:800;color:var(--navy)">${hkm}</div>
+    <div style="font-size:12px;color:var(--tx2);margin-top:2px">${desc}</div>
+    <div style="font-size:11px;color:var(--tx3);margin-top:4px">${casino.name}</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="an-exp-wrap">
+      <button class="btn-act" onclick="toggleExpDd(event,'exp-dd-itemdrill')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:3px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        EXPORT &#x25BE;
+      </button>
+      <div id="exp-dd-itemdrill" class="an-exp-dd" style="display:none">
+        <div class="an-exp-dd-item" onclick="exportItemPurchaseDetail('csv')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Export as CSV</div>
+        <div class="an-exp-dd-item" onclick="exportItemPurchaseDetail('xlsx')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg> Export as Excel</div>
+        <div class="an-exp-dd-item" onclick="exportItemPurchaseDetail('pdf')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Export as PDF</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+${fobSummary.length>1?`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;margin-top:14px;flex-wrap:wrap">
+  <div style="display:flex;align-items:center;gap:10px">
+    <label style="font-size:14px;font-weight:700;color:var(--tx2);white-space:nowrap">FOB / Department</label>
+    <select class="sel" style="width:250px;max-width:300px;font-size:12px" onchange="S._itemDrillFob=this.value;render()">
+      <option value="">All Departments</option>
+      ${fobOpts}
+    </select>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div style="font-size:14px;color:var(--tx2);display:flex;align-items:center">Orders: <b style="color:var(--navy);margin-left:4px">${purchases.length}</b></div>
+    <div style="font-size:14px;color:var(--tx2);display:flex;align-items:center">Qty: <b style="color:var(--navy);margin-left:4px">${totalQty}</b></div>
+    <div style="font-size:14px;color:var(--tx2);display:flex;align-items:center">Total: <b style="color:var(--green2);font-size:24px;margin-left:4px">$${totalAmt.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</b></div>
+  </div>
+</div>`:`<div style="display:flex;align-items:center;justify-content:flex-end;gap:16px;margin-bottom:14px;margin-top:14px">
+  <div style="font-size:12px;color:var(--tx2)">Orders: <b style="color:var(--navy)">${purchases.length}</b></div>
+  <div style="font-size:12px;color:var(--tx2)">Qty: <b style="color:var(--navy)">${totalQty}</b></div>
+  <div style="font-size:12px;color:var(--tx2)">Total: <b style="color:var(--green2)">$${totalAmt.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</b></div>
+</div>`}
+${purchases.length===0
+  ?`<div class="an-empty">No purchase history found${fobFilter?' for this FOB filter':' for this item'}. ${fobFilter?'Try selecting a different department.':'Re-upload QBE Purchase History to populate this data.'}</div>`
+  :`<div class="tw"><table class="t1">
+  <thead><tr>
+    <th>No.</th>
+    <th>Date</th>
+    <th>FOB / Dept</th>
+    <th>Qty</th>
+    <th>Price</th>
+    <th>Amount</th>
+    <th>Invoice #</th>
+  </tr></thead>
+  <tbody>${tRows}</tbody>
+</table></div>`}`;
+}
+
+function exportItemPurchaseDetail(fmt='csv'){
+  const dd=document.getElementById('exp-dd-itemdrill');
+  if(dd)dd.style.display='none';
+  const cid=S.anDrillCid,hkm=S.anItemDrillHkm;
+  if(!cid||!hkm)return;
+  const casino=DB.casinos.find(c=>c.id===cid);
+  const rawRows=(DB.qbeRows||{})[`${cid}|${hkm}`]||[];
+  const fobFilter=S._itemDrillFob||'';
+  const allPurchases=rawRows.map(r=>({dt:new Date(r.dt),fob:r.fob||'',price:r.price,amount:r.amount,num:r.num,qty:r.qty})).sort((a,b)=>b.dt-a.dt);
+  const purchases=fobFilter?allPurchases.filter(p=>p.fob===fobFilter):allPurchases;
+  const dataRows=[['Casino','HKM Code','Date','FOB / Dept','Qty','Price','Amount','Invoice #']];
+  purchases.forEach(p=>{
+    dataRows.push([casino?casino.name:'',hkm,p.dt.toLocaleDateString('en-US'),p.fob,p.qty!=null?p.qty:'',p.price!=null?p.price.toFixed(2):'',p.amount?p.amount.toFixed(2):'',p.num||'']);
+  });
+  const fname=`purchase_history_${hkm}_${casino?casino.id:cid}_${new Date().toISOString().slice(0,10)}`;
+  if(fmt==='xlsx'&&window.XLSX){
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(dataRows),'Purchase History');
+    XLSX.writeFile(wb,fname+'.xlsx');
+    toast('Exported as Excel.','ok','Export Complete',4000);
+  }else if(fmt==='pdf'){
+    const w=window.open('','_blank');
+    if(!w)return;
+    const tbl=dataRows.map((r,i)=>`<tr>${r.map(c=>`<${i?'td':'th'}>${c}</${i?'td':'th'}>`).join('')}</tr>`).join('');
+    w.document.write(`<!DOCTYPE html><html><head><title>${fname}</title><style>body{font-family:sans-serif;font-size:11px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:4px 6px}th{background:#1B5C9E;color:#fff}</style></head><body><h3>Purchase History — ${hkm} — ${casino?casino.name:''}</h3><table>${tbl}</table></body></html>`);
+    w.document.close();w.print();
+    toast('PDF print dialog opened.','ok','Export PDF',4000);
+  }else{
+    const csv=dataRows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const a=document.createElement('a');
+    a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+    a.download=fname+'.csv';a.click();
+    toast('Exported as CSV.','ok','Export Complete',4000);
+  }
+}
+
+function rPurchaseHistory(){
+  const cid=S.anDrillCid;
+  if(!cid){nav('analytics');return'';}
+  const casino=DB.casinos.find(c=>c.id===cid);
+  if(!casino){nav('analytics');return'';}
+  const qr=DB.qbeRows||{};
+  // Gather ALL raw rows for this casino across all item codes
+  const allRows=[];
+  Object.entries(qr).forEach(([key,rows])=>{
+    if(!key.startsWith(cid+'|'))return;
+    const hkm=key.split('|')[1];
+    // Find description from items
+    let desc='';
+    const allItems=Object.values(DB.items).flat();
+    const match=allItems.find(it=>(it.hkm||'').trim()===hkm);
+    if(match)desc=match.desc||'';
+    rows.forEach(r=>allRows.push({hkm,desc,dt:new Date(r.dt),fob:r.fob&&r.fob.trim()?r.fob.trim():'No FOB',price:r.price,amount:r.amount,qty:r.qty,num:r.num}));
+  });
+  // Apply filters
+  const fobFilter=S._phFobFilter||'';
+  const itemFilter=S._phItemFilter||'';
+  const searchFilter=(S._phSearch||'').toUpperCase();
+  const daysFilter=S._phDaysFilter?parseInt(S._phDaysFilter):0;
+  let filtered=allRows;
+  if(fobFilter)filtered=filtered.filter(r=>r.fob===fobFilter);
+  if(itemFilter)filtered=filtered.filter(r=>r.hkm===itemFilter);
+  if(searchFilter)filtered=filtered.filter(r=>r.hkm.toUpperCase().includes(searchFilter)||r.desc.toUpperCase().includes(searchFilter)||r.fob.toUpperCase().includes(searchFilter));
+  if(daysFilter){const cutoff=new Date();cutoff.setDate(cutoff.getDate()-daysFilter);filtered=filtered.filter(r=>r.dt>=cutoff);}
+  filtered.sort((a,b)=>b.dt-a.dt);
+  // Summaries
+  const totalAmt=filtered.reduce((s,r)=>s+r.amount,0);
+  const totalQty=filtered.reduce((s,r)=>s+(r.qty||0),0);
+  // Unique FOBs and items for dropdowns
+  const fobMap={};allRows.forEach(r=>{fobMap[r.fob]=(fobMap[r.fob]||0)+1;});
+  const fobList=Object.entries(fobMap).sort((a,b)=>b[1]-a[1]);
+  const itemMap={};allRows.forEach(r=>{itemMap[r.hkm]=(itemMap[r.hkm]||0)+1;});
+  const itemList=Object.entries(itemMap).sort((a,b)=>b[1]-a[1]);
+  const fobOpts=fobList.map(([f])=>`<option value="${f.replace(/"/g,'&quot;')}"${fobFilter===f?' selected':''}>${f}</option>`).join('');
+  const itemOpts=itemList.map(([it])=>`<option value="${it.replace(/"/g,'&quot;')}"${itemFilter===it?' selected':''}>${it}</option>`).join('');
+  const tRows=filtered.slice(0,500).map((r,i)=>{
+    const dtStr=r.dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const priceStr=r.price!=null?'$'+parseFloat(r.price).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
+    const amtStr=r.amount?'$'+parseFloat(r.amount).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
+    const qtyStr=r.qty!=null?r.qty:'—';
+    const numStr=r.num?String(r.num):'—';
+    return`<tr>
+      <td style="color:var(--tx3);font-size:11px">${i+1}</td>
+      <td style="font-size:11px;font-weight:700;color:var(--navy);cursor:pointer" onclick="S.anDrillCid='${cid}';S.anItemDrillHkm='${r.hkm}';S.anItemDrillDesc='${r.desc.replace(/'/g,"\\'")}';nav('itemPurchaseDetail')">${r.hkm}</td>
+      <td style="font-size:10px;color:var(--tx2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.desc.replace(/"/g,'&quot;')}">${r.desc||'—'}</td>
+      <td style="font-size:11px">${dtStr}</td>
+      <td style="font-size:11px;font-weight:600">${r.fob}</td>
+      <td style="font-size:11px;text-align:center">${qtyStr}</td>
+      <td style="font-size:11px;color:var(--green2);font-weight:600">${priceStr}</td>
+      <td style="font-size:11px">${amtStr}</td>
+      <td style="font-size:11px;color:var(--tx3)">${numStr}</td>
+    </tr>`;
+  }).join('');
+  const overLimit=filtered.length>500;
+  return`
+<div class="sticky-ctrl">
+<div style="font-size:12px;color:var(--tx2);margin-bottom:10px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+  <span style="cursor:pointer;color:var(--tx3)" onclick="nav('analytics')">Analytics</span>
+  <span style="color:var(--bd2)">&rsaquo;</span>
+  <span style="cursor:pointer;color:var(--tx3)" onclick="S.anCasino='${cid}';nav('analytics')">${casino.name}</span>
+  <span style="color:var(--bd2)">&rsaquo;</span>
+  <span style="color:var(--navy);font-weight:700">Purchase History</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:0">
+  <div>
+    <div style="font-size:20px;font-weight:800;color:var(--navy)">Purchase History</div>
+    <div style="font-size:12px;color:var(--tx2);margin-top:2px">${casino.name}</div>
+  </div>
+  <div class="an-exp-wrap">
+    <button class="btn-act" onclick="toggleExpDd(event,'exp-dd-ph')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:3px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      EXPORT &#x25BE;
+    </button>
+    <div id="exp-dd-ph" class="an-exp-dd" style="display:none">
+      <div class="an-exp-dd-item" onclick="exportPurchaseHistory('csv')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Export as CSV</div>
+      <div class="an-exp-dd-item" onclick="exportPurchaseHistory('xlsx')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg> Export as Excel</div>
+      <div class="an-exp-dd-item" onclick="exportPurchaseHistory('pdf')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Export as PDF</div>
+    </div>
+  </div>
+</div>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:6px">
+      <label style="font-size:12px;font-weight:700;color:var(--tx2);white-space:nowrap">Item</label>
+      <select class="sel" style="width:160px;font-size:12px" onchange="S._phItemFilter=this.value;render()">
+        <option value="">All Items</option>
+        ${itemOpts}
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <label style="font-size:12px;font-weight:700;color:var(--tx2);white-space:nowrap">FOB</label>
+      <select class="sel" style="width:200px;font-size:12px" onchange="S._phFobFilter=this.value;render()">
+        <option value="">All Departments</option>
+        ${fobOpts}
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <label style="font-size:12px;font-weight:700;color:var(--tx2);white-space:nowrap">Period</label>
+      <select class="sel" style="width:130px;font-size:12px" onchange="S._phDaysFilter=this.value;render()">
+        <option value=""${!daysFilter?' selected':''}>All Time</option>
+        <option value="7"${daysFilter===7?' selected':''}>Last 7 Days</option>
+        <option value="30"${daysFilter===30?' selected':''}>Last 30 Days</option>
+        <option value="45"${daysFilter===45?' selected':''}>Last 45 Days</option>
+        <option value="60"${daysFilter===60?' selected':''}>Last 60 Days</option>
+        <option value="90"${daysFilter===90?' selected':''}>Last 90 Days</option>
+        <option value="365"${daysFilter===365?' selected':''}>Last 365 Days</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <input type="text" class="sel" placeholder="Search..." value="${(S._phSearch||'').replace(/"/g,'&quot;')}" oninput="S._phSearch=this.value;clearTimeout(window._phSTO);window._phSTO=setTimeout(render,300)" style="width:160px;font-size:12px">
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div style="font-size:14px;color:var(--tx2);display:flex;align-items:center">Orders: <b style="color:var(--navy);margin-left:4px">${filtered.length}</b></div>
+    <div style="font-size:14px;color:var(--tx2);display:flex;align-items:center">Qty: <b style="color:var(--navy);margin-left:4px">${totalQty}</b></div>
+    <div style="font-size:14px;color:var(--tx2);display:flex;align-items:center">Total: <b style="color:var(--green2);font-size:24px;margin-left:4px">$${totalAmt.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</b></div>
+  </div>
+</div>
+${filtered.length===0
+  ?`<div class="an-empty">No purchase history found${fobFilter||itemFilter||searchFilter?' for this filter':''}. ${!allRows.length?'Upload QBE Purchase History to populate this data.':'Try adjusting your filters.'}</div>`
+  :`<div class="tw"><table class="t1">
+  <thead><tr>
+    <th>No.</th>
+    <th>Item Code</th>
+    <th>Description</th>
+    <th>Date</th>
+    <th>FOB / Dept</th>
+    <th>Qty</th>
+    <th>Price</th>
+    <th>Amount</th>
+    <th>Invoice #</th>
+  </tr></thead>
+  <tbody>${tRows}</tbody>
+</table></div>${overLimit?`<div style="text-align:center;padding:12px;font-size:12px;color:var(--tx3)">Showing first 500 of ${filtered.length} records. Use filters to narrow results.</div>`:''}`}`;
+}
+
+function exportPurchaseHistory(fmt='csv'){
+  const dd=document.getElementById('exp-dd-ph');
+  if(dd)dd.style.display='none';
+  const cid=S.anDrillCid;
+  if(!cid)return;
+  const casino=DB.casinos.find(c=>c.id===cid);
+  const qr=DB.qbeRows||{};
+  const allRows=[];
+  Object.entries(qr).forEach(([key,rows])=>{
+    if(!key.startsWith(cid+'|'))return;
+    const hkm=key.split('|')[1];
+    let desc='';
+    const allItems=Object.values(DB.items).flat();
+    const match=allItems.find(it=>(it.hkm||'').trim()===hkm);
+    if(match)desc=match.desc||'';
+    rows.forEach(r=>allRows.push({hkm,desc,dt:new Date(r.dt),fob:r.fob||'',price:r.price,amount:r.amount,qty:r.qty,num:r.num}));
+  });
+  const fobFilter=S._phFobFilter||'';
+  const itemFilter=S._phItemFilter||'';
+  const searchFilter=(S._phSearch||'').toUpperCase();
+  const daysFilter=S._phDaysFilter?parseInt(S._phDaysFilter):0;
+  let filtered=allRows;
+  if(fobFilter)filtered=filtered.filter(r=>r.fob===fobFilter);
+  if(itemFilter)filtered=filtered.filter(r=>r.hkm===itemFilter);
+  if(searchFilter)filtered=filtered.filter(r=>r.hkm.toUpperCase().includes(searchFilter)||r.desc.toUpperCase().includes(searchFilter)||r.fob.toUpperCase().includes(searchFilter));
+  if(daysFilter){const cutoff=new Date();cutoff.setDate(cutoff.getDate()-daysFilter);filtered=filtered.filter(r=>r.dt>=cutoff);}
+  filtered.sort((a,b)=>b.dt-a.dt);
+  const dataRows=[['Casino','Item Code','Description','Date','FOB / Dept','Qty','Price','Amount','Invoice #']];
+  filtered.forEach(r=>{
+    dataRows.push([casino?casino.name:'',r.hkm,r.desc,r.dt.toLocaleDateString('en-US'),r.fob,r.qty!=null?r.qty:'',r.price!=null?r.price.toFixed(2):'',r.amount?r.amount.toFixed(2):'',r.num||'']);
+  });
+  const fname=`purchase_history_${casino?casino.id:cid}_${new Date().toISOString().slice(0,10)}`;
+  if(fmt==='xlsx'&&window.XLSX){
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(dataRows),'Purchase History');
+    XLSX.writeFile(wb,fname+'.xlsx');
+    toast('Exported as Excel.','ok','Export Complete',4000);
+  }else if(fmt==='pdf'){
+    const w=window.open('','_blank');
+    if(!w)return;
+    const tbl=dataRows.map((r,i)=>`<tr>${r.map(c=>`<${i?'td':'th'}>${c}</${i?'td':'th'}>`).join('')}</tr>`).join('');
+    w.document.write(`<!DOCTYPE html><html><head><title>${fname}</title><style>body{font-family:sans-serif;font-size:11px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:4px 6px}th{background:#1B5C9E;color:#fff}</style></head><body><h3>Purchase History — ${casino?casino.name:''}</h3><table>${tbl}</table></body></html>`);
+    w.document.close();w.print();
+    toast('PDF print dialog opened.','ok','Export PDF',4000);
+  }else{
+    const csv=dataRows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const a=document.createElement('a');
+    a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+    a.download=fname+'.csv';a.click();
+    toast('Exported as CSV.','ok','Export Complete',4000);
+  }
+}
+
 function recalcAnalytics(){
+  if(!DB._isAdmin){toast('Only admins can recalculate analytics.','er','Access Denied');return;}
   if(!DB.analyticsSnaps)DB.analyticsSnaps={};
   (DB.casinos||[]).forEach(c=>{
     const r=calcCasinoAnalytics(c.id);
@@ -3767,10 +4202,25 @@ function exportAnalytics(cid,fmt='csv'){
 
 // ── END ANALYTICS ──────────────────────────────────────────────
 
+function _wfKey(ddOrId){
+  const dd=typeof ddOrId==='string'?DUE_DATES.find(d=>d.id===ddOrId):ddOrId;
+  if(!dd)return ddOrId;
+  const next=getNextDue(dd);
+  const ds=next.toISOString().slice(0,10);
+  return`${dd.id}_${ds}`;
+}
 function toggleWfStep(ddId,step){
+  if(!DB._isAdmin)return;
   if(!DB.wf)DB.wf={};
-  if(!DB.wf[ddId])DB.wf[ddId]={};
-  DB.wf[ddId][step]=!DB.wf[ddId][step];
+  const key=_wfKey(ddId);
+  if(!DB.wf[key])DB.wf[key]={};
+  DB.wf[key][step]=!DB.wf[key][step];
+  // Clean up old workflow entries (older than 14 days)
+  const cutoff=Date.now()-14*86400000;
+  Object.keys(DB.wf).forEach(k=>{
+    const m=k.match(/(\d{4}-\d{2}-\d{2})$/);
+    if(m&&new Date(m[1]).getTime()<cutoff)delete DB.wf[k];
+  });
   dbSave();
   // re-render just the modal content
   const mc=document.getElementById('wf-modal-content');
@@ -3781,8 +4231,9 @@ function toggleWfStep(ddId,step){
   }
 }
 
-function _wfPct(ddId){
-  const wf=(DB.wf||{})[ddId]||{};
+function _wfPct(ddOrId){
+  const key=_wfKey(ddOrId);
+  const wf=(DB.wf||{})[key]||{};
   const done=[!!wf.qbe,!!wf.upload,!!wf.working,!!wf.review,!!wf.final];
   return Math.round(done.filter(Boolean).length/5*100);
 }
@@ -3792,7 +4243,8 @@ function _rWfModalInner(casinoId,activeTab){
   const hasBoth=dds.some(d=>d.type==='weekly')&&dds.some(d=>d.type==='monthly');
   const dd=dds.find(d=>d.type===activeTab)||dds[0];
   if(!dd)return'<div style="color:var(--tx3);font-size:13px">No bid schedule found.</div>';
-  const wf=(DB.wf||{})[dd.id]||{};
+  const wfKey=_wfKey(dd);
+  const wf=(DB.wf||{})[wfKey]||{};
   const done=[!!wf.qbe,!!wf.upload,!!wf.working,!!wf.review,!!wf.final];
   const pct=Math.round(done.filter(Boolean).length/5*100);
   const activeIdx=done.findIndex(d=>!d);
@@ -3801,7 +4253,7 @@ function _rWfModalInner(casinoId,activeTab){
   const now=getPST();
   const next=getNextDue(dd);
   const ms=next-now;
-  const isDone=!!wf.final;
+  const isDone=done.every(Boolean);
   const tabsHtml=hasBoth?`<div class="wf-modal-tabs">
     <button class="wf-modal-tab${activeTab==='weekly'?' on':''}" onclick="setWfModalTab('${casinoId}','weekly')">📆 Weekly</button>
     <button class="wf-modal-tab${activeTab==='monthly'?' on':''}" onclick="setWfModalTab('${casinoId}','monthly')">📅 Monthly</button>
@@ -3969,6 +4421,7 @@ function openCalNote(dateKey,label){
 }
 
 function saveCalNote(dateKey,del=false){
+  if(!DB._isAdmin)return;
   if(!DB.calNotes)DB.calNotes={};
   if(del){
     delete DB.calNotes[dateKey];
@@ -4380,10 +4833,34 @@ function checkAlerts(){
         DB.alertsSent[a.k]=Date.now();
         const urg=a.k.startsWith('30m')||a.k.startsWith('1hr')?'red':a.k.startsWith('2hr')||a.k.startsWith('daybefore')||a.k.startsWith('5am')?'yellow':'green';
         addNotif(a.msg,urg);
+        // Push toast banner + sound
+        const toastType=urg==='red'?'er':urg==='yellow'?'wn':'ok';
+        const toastDur=urg==='red'?12000:urg==='yellow'?8000:6000;
+        toast(a.msg,toastType,'Bid Alert',toastDur);
+        _playAlertSound(urg);
         dbSave();
       }
     });
   });
+}
+function _playAlertSound(urg){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const freqs=urg==='red'?[880,660,880]:[523,659];
+    const dur=urg==='red'?0.15:0.12;
+    freqs.forEach((freq,i)=>{
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      osc.type='sine';
+      osc.frequency.value=freq;
+      gain.gain.setValueAtTime(0.3,ctx.currentTime+i*dur);
+      gain.gain.exponentialRampToValueAtTime(0.01,ctx.currentTime+(i+1)*dur);
+      osc.connect(gain);gain.connect(ctx.destination);
+      osc.start(ctx.currentTime+i*dur);
+      osc.stop(ctx.currentTime+(i+1)*dur);
+    });
+    setTimeout(()=>ctx.close(),1000);
+  }catch(e){}
 }
 let _alertInterval=null;
 function startAlerts(){
@@ -4402,9 +4879,11 @@ function startAlerts(){
 // ══════════════════════════════════════════════════════════════
 function pruneOldData(){
   const now=new Date();
-  const cutoff=new Date(now.getFullYear(),now.getMonth()-14,now.getDate());
+  const cutoff=new Date(now.getFullYear(),now.getMonth()-15,now.getDate());
+  const cutoffISO=cutoff.toISOString();
+  const cutoffTs=cutoff.getTime();
   let pruned=0;
-  // Prune price list periods older than 14 months
+  // 1. Prune price list periods older than 15 months
   if(DB.periods&&DB.periods.length){
     const before=DB.periods.length;
     DB.periods=DB.periods.filter(p=>{
@@ -4415,22 +4894,100 @@ function pruneOldData(){
     });
     pruned+=before-DB.periods.length;
   }
-  // Prune alertsSent older than 14 months
+  // 2. Prune alertsSent older than 15 months
   if(DB.alertsSent){
     Object.keys(DB.alertsSent).forEach(k=>{
-      if(DB.alertsSent[k]<cutoff.getTime()){delete DB.alertsSent[k];pruned++;}
+      if(DB.alertsSent[k]<cutoffTs){delete DB.alertsSent[k];pruned++;}
     });
   }
-  // Prune imported bid history cols older than 14 months
+  // 3. Prune qbeRows older than 15 months
+  if(DB.qbeRows){
+    Object.keys(DB.qbeRows).forEach(key=>{
+      const before=DB.qbeRows[key].length;
+      DB.qbeRows[key]=DB.qbeRows[key].filter(r=>r.dt>=cutoffISO);
+      pruned+=(before-DB.qbeRows[key].length);
+      if(!DB.qbeRows[key].length)delete DB.qbeRows[key];
+    });
+  }
+  // 4. Prune imported bid history (impBH) — remove columns/prices older than 15 months
   if(DB.impBH){
     Object.keys(DB.impBH).forEach(key=>{
       const imp=DB.impBH[key];
-      if(!imp||!imp.cols)return;
-      // Keep all cols for now — they're just bid period labels not dates we can reliably parse
-      // This avoids accidentally pruning valid data
+      if(!imp||!imp.cols||!imp.cols.length)return;
+      // Try to parse date from col labels (e.g. "Weekly 03/22", "MTH 01/15/26")
+      const keepIdx=[];
+      imp.cols.forEach((col,i)=>{
+        const m=String(col).match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+        if(m){
+          const yr=m[3]?parseInt(m[3]):now.getFullYear();
+          const d=new Date(yr<100?(yr<50?2000+yr:1900+yr):yr,parseInt(m[1])-1,parseInt(m[2]));
+          if(!isNaN(d.getTime())&&d<cutoff)return; // skip old
+        }
+        keepIdx.push(i);
+      });
+      if(keepIdx.length<imp.cols.length){
+        const removed=imp.cols.length-keepIdx.length;
+        imp.cols=keepIdx.map(i=>imp.cols[i]);
+        if(imp.rows){
+          Object.keys(imp.rows).forEach(item=>{
+            imp.rows[item]=keepIdx.map(i=>imp.rows[item][i]!=null?imp.rows[item][i]:null);
+          });
+        }
+        pruned+=removed;
+      }
+      // Remove entirely if no cols left
+      if(!imp.cols.length)delete DB.impBH[key];
     });
   }
-  if(pruned>0){dbSave();console.log(`Pruned ${pruned} old records (>14 months)`);}
+  // 5. Prune DB.lps — remove entries for items/casinos that no longer exist
+  if(DB.lps){
+    const validCids=new Set((DB.casinos||[]).map(c=>c.id));
+    Object.keys(DB.lps).forEach(key=>{
+      const cid=key.split('|')[0];
+      if(!validCids.has(cid)){delete DB.lps[key];pruned++;}
+    });
+  }
+  // 6. Prune DB.delItems — remove entries for casinos that no longer exist
+  if(DB.delItems){
+    const validCids=new Set((DB.casinos||[]).map(c=>c.id));
+    Object.keys(DB.delItems).forEach(key=>{
+      const cid=key.split('|')[0];
+      if(!validCids.has(cid)){delete DB.delItems[key];pruned++;}
+    });
+  }
+  // 7. Prune DB.calNotes — remove notes older than 15 months
+  if(DB.calNotes){
+    Object.keys(DB.calNotes).forEach(key=>{
+      try{
+        const d=new Date(key);
+        if(!isNaN(d.getTime())&&d<cutoff){delete DB.calNotes[key];pruned++;}
+      }catch(e){}
+    });
+  }
+  // 8. Prune DB.items — remove entries for casinos that no longer exist
+  if(DB.items){
+    const validCids=new Set((DB.casinos||[]).map(c=>c.id));
+    Object.keys(DB.items).forEach(key=>{
+      const cid=key.split('|')[0];
+      if(!validCids.has(cid)){delete DB.items[key];pruned++;}
+    });
+  }
+  // 9. Prune DB.savedBids — remove bids older than 15 months
+  if(DB.savedBids){
+    Object.keys(DB.savedBids).forEach(key=>{
+      if(!Array.isArray(DB.savedBids[key]))return;
+      const before=DB.savedBids[key].length;
+      DB.savedBids[key]=DB.savedBids[key].filter(b=>{
+        try{
+          const d=new Date(b.dt.replace(/\./g,'/'));
+          return isNaN(d.getTime())||d>=cutoff;
+        }catch(e){return true;}
+      });
+      pruned+=(before-DB.savedBids[key].length);
+      if(!DB.savedBids[key].length)delete DB.savedBids[key];
+    });
+  }
+  if(pruned>0){dbSave();console.log(`Pruned ${pruned} old records (>15 months)`);}
 }
 
 
@@ -4472,15 +5029,6 @@ function getBidStatus(ddId){
   }
   return val;
 }
-function statusClass(s){
-  if(s==='working')return'st-working';
-  if(s==='pending')return'st-pending';
-  if(s==='submitted')return'st-submitted';
-  if(s==='closed')return'st-closed';
-  if(s==='admin')return'st-admin';
-  return'';
-}
-
 // ── Bell helpers ──
 let _bellOpen=false;
 function toggleBell(){
