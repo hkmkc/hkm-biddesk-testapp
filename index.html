@@ -63,6 +63,9 @@ body.sb-collapsed #sb-collapse-btn svg{transform:rotate(180deg)}
 .sb-item.on{background:var(--gold);color:#1a2a3a;font-weight:700}
 .sb-icon{width:18px;text-align:center;flex-shrink:0;opacity:.85;display:flex;align-items:center;justify-content:center}.sb-icon svg{display:block}
 .sb-divider{height:2px;background:var(--gold);margin:14px 12px;border-radius:1px;flex-shrink:0}
+.back-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:#f4f8fc;border:1.5px solid var(--bd2);color:var(--navy);border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;transition:.15s;font-family:inherit;float:right;margin-left:10px}
+.back-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+.back-btn svg{flex-shrink:0}
 .sb-cat-hd{display:flex;align-items:center;gap:9px;padding:9px 14px;color:rgba(255,255,255,.75);font-size:13px;font-weight:500;border-radius:6px;margin:1px 8px}
 .sb-casino-hd{padding:8px 14px;font-size:12px;font-weight:500;color:rgba(255,255,255,.65);display:flex;align-items:center;justify-content:space-between;gap:6px;cursor:pointer;transition:.12s;border-radius:6px;margin:1px 8px}
 .sb-casino-hd:hover{background:rgba(255,255,255,.1);color:#fff}
@@ -109,12 +112,15 @@ body.sb-collapsed #sb-collapse-btn svg{transform:rotate(180deg)}
 .a-in{background:#e6f1fb;border:1px solid #b5d4f4;color:#0c447c}
 .a-er{background:var(--rl);border:1px solid #f7c1c1;color:var(--red)}
 .tw{overflow-x:auto;border:1px solid var(--bd);border-radius:var(--r);background:var(--bg2)}
-.twh{max-height:540px;overflow-y:auto}
+.twh{max-height:calc(100vh - 280px);overflow-y:auto}
 table{border-collapse:collapse;font-size:12px;width:100%}
-thead th{background:var(--navy);color:#fff;padding:7px 9px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:700;position:sticky;top:0;z-index:2}
+thead th{background:var(--navy);color:#fff;padding:7px 9px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:700;position:sticky;top:0;z-index:3}
+.tw thead{position:sticky;top:0;z-index:3}
 .thp{background:var(--navy3)!important}.thc{background:var(--navy4)!important}
 .thb{background:#1d6a4a!important;color:#a9dfbf!important}.thn{background:#784212!important;color:#fad7a0!important}
 tbody td{padding:6px 9px;border:1px solid var(--bd);white-space:nowrap;vertical-align:middle}
+.tw.draftbid-tbl tbody td{padding:2px 9px;line-height:1.2;font-size:11px}
+.tw.draftbid-tbl tbody td input.nbi{padding:2px 6px;height:24px}
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover td,tbody tr:hover .s1,tbody tr:hover .s2{background:var(--bg3)!important}
 .s1{position:sticky;left:0;z-index:1;background:var(--bg2);border-right:1px solid var(--bd)}
@@ -878,7 +884,6 @@ function rSB(){
           <span class="sb-cat-c">${gI(c.id,cat).length}</span>
         </div>`;
       });
-      h+=`<div class="sb-add" onclick="nav('upload',{uTab:'addbid'})">+ Add Bid Category</div>`;
     }
   });
   if(DB._isAdmin)h+=`<div class="sb-add" style="padding-left:14px;margin-top:4px" onclick="nav('upload',{uTab:'addbid'})">+ Add Casino</div>`;
@@ -1050,11 +1055,55 @@ function rTR(){
 // rDash defined below
 
 // ── CASINO ──
-function rCasino(){const c=S.casino;return`
+function rCasino(){const c=S.casino;
+  // Find most recent submitted bid across all categories for this casino
+  let lastBid=null;
+  (c.cats||[]).forEach(cat=>{
+    const key=c.id+'|'+cat;
+    const bids=(DB.savedBids||{})[key]||[];
+    if(bids.length){
+      const latest=bids[0];
+      const ts=parseInt((latest.id||'').replace(/^sb/,''))||0;
+      if(!lastBid||ts>lastBid.ts)lastBid={cat,lbl:latest.lbl,ts};
+    }
+  });
+  // Find next bid deadline for this casino
+  const dds=DUE_DATES.filter(dd=>dd.casino===c.id).map(dd=>({dd,when:getNextDue(dd)})).sort((a,b)=>a.when-b.when);
+  const nextDue=dds[0];
+  let nextDueStr='—';
+  if(nextDue){
+    const d=nextDue.when;
+    const ds=d.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',weekday:'short',month:'short',day:'numeric'});
+    const ts=d.toLocaleTimeString('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',minute:'2-digit'});
+    const ms=d-new Date();
+    const dayMs=86400000;
+    const days=Math.floor(ms/dayMs);
+    let countdown='';
+    if(ms<0)countdown='<span style="color:var(--red);font-weight:800">OVERDUE</span>';
+    else if(days<1)countdown=`<span style="color:var(--red);font-weight:700">in ${Math.floor(ms/3600000)}h</span>`;
+    else if(days<3)countdown=`<span style="color:var(--gold2);font-weight:700">in ${days}d</span>`;
+    else countdown=`<span style="color:var(--green);font-weight:600">in ${days}d</span>`;
+    nextDueStr=`<strong style="color:var(--navy)">${nextDue.dd.name} ${nextDue.dd.type==='weekly'?'Weekly':'Monthly'}</strong> — ${ds} ${ts} PST ${countdown}`;
+  }
+  // Last QBE upload (from DB.lps — find most recent lpDate)
+  let lastQbeDate=null;
+  Object.keys(DB.lps||{}).forEach(k=>{
+    if(!k.startsWith(c.id+'|'))return;
+    const lp=DB.lps[k];
+    if(lp&&lp.lpDate){
+      const d=new Date(lp.lpDate);
+      if(!isNaN(d.getTime())&&(!lastQbeDate||d>lastQbeDate))lastQbeDate=d;
+    }
+  });
+  const lastQbeStr=lastQbeDate?lastQbeDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
+  const lastBidStr=lastBid?`<strong>${lastBid.cat}</strong> — ${lastBid.lbl}`:'<span style="color:var(--tx3)">No bids submitted yet</span>';
+  const totalItems=(c.cats||[]).reduce((n,cat)=>n+gI(c.id,cat).length,0);
+  return`
+<button class="back-btn" onclick="nav('dashboard')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Dashboard</button>
 <div style="font-size:12px;color:var(--tx2);margin-bottom:10px;display:flex;align-items:center;gap:5px"><span style="cursor:pointer;color:var(--tx3)" onclick="nav('dashboard')">Dashboard</span><span style="color:var(--bd2)">›</span><span style="color:var(--navy);font-weight:700">${c.short}</span></div>
 <div style="margin-bottom:20px">
   <div style="font-size:20px;font-weight:800;color:var(--navy);margin-bottom:3px">${c.name}</div>
-  <div style="font-size:13px;color:var(--tx2)">Select a bid category</div>
+  <div style="font-size:13px;color:var(--tx2)">Select a bid category &middot; ${c.cats.length} categor${c.cats.length!==1?'ies':'y'} &middot; ${totalItems} total items</div>
 </div>
 <div class="qgrid" style="margin-bottom:22px">
 ${c.cats.map(cat=>`<div class="qc" onclick="nav('bids',{cat:'${cat}',bTab:'bidhistory'})">
@@ -1064,8 +1113,15 @@ ${c.cats.map(cat=>`<div class="qc" onclick="nav('bids',{cat:'${cat}',bTab:'bidhi
 </div>`).join('')}
 </div>
 <div class="card" style="font-size:13px">
-  <div class="ct">Recent Activity</div>
-  Last bid: <strong>Asian — 03/22–03/28</strong> &nbsp;·&nbsp; Next due: <strong style="color:var(--gold2)">03/29–04/04</strong>
+  <div class="ct" style="margin-bottom:8px">Recent Activity</div>
+  <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:12px;color:var(--tx2)">
+    <div style="color:var(--tx3);font-weight:600">Last Bid Submitted:</div>
+    <div>${lastBidStr}</div>
+    <div style="color:var(--tx3);font-weight:600">Next Deadline:</div>
+    <div>${nextDueStr}</div>
+    <div style="color:var(--tx3);font-weight:600">Last QBE Upload:</div>
+    <div>${lastQbeStr}</div>
+  </div>
 </div>`;}
 
 // ── BIDS ──
@@ -1080,7 +1136,8 @@ function rBids(){
     bidhistory:rBidHist,
     plhistory:rPLHist
   };
-  const crumb=`<div style="font-size:12px;color:var(--tx2);margin-bottom:20px;display:flex;align-items:center;gap:5px">
+  const crumb=`<button class="back-btn" onclick="nav('casino')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to ${S.casino?S.casino.short:'Casino'}</button>
+  <div style="font-size:12px;color:var(--tx2);margin-bottom:20px;display:flex;align-items:center;gap:5px">
     <span style="cursor:pointer;color:var(--tx3)" onclick="nav('dashboard')">Dashboard</span>
     <span style="color:var(--bd2)">›</span>
     <span style="cursor:pointer;color:var(--tx3)" onclick="nav('casino')">${S.casino?S.casino.short:''}</span>
@@ -1260,6 +1317,7 @@ ${DB._isAdmin?`<div style="display:flex;gap:8px;margin-bottom:0;flex-wrap:wrap;a
   <button class="btn-act" onclick="runAutoPrice()">AUTOMATE BID</button>
   <button class="btn-act" onclick="openPasteModal()">PASTE BID PRICES</button>
   <button class="btn-act btn-act-gold" onclick="copyDraftBid()">COPY BID PRICES</button>
+  <button class="btn-act" style="color:#c0392b;border-color:#e8a8a0" onclick="clearDraftBid()">CLEAR BID</button>
   <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
     <span style="font-size:11px;font-weight:800;color:var(--navy);white-space:nowrap;letter-spacing:.3px">EFFECTIVE THROUGH:</span>
     <input type="date" id="eff-from" value="${S._effFrom||''}" onchange="S._effFrom=this.value" style="padding:4px 8px;border-radius:6px;border:1.5px solid var(--navy);font-size:11px;font-family:inherit;color:var(--navy);background:var(--bg)">
@@ -1274,7 +1332,7 @@ ${DB._isAdmin?`<div style="display:flex;gap:8px;margin-bottom:0;flex-wrap:wrap;a
 </div>`}
 </div>
 <div id="draft-al" class="al" style="margin-bottom:10px"></div>
-<div class="tw twh"><table><thead><tr>
+<div class="tw twh draftbid-tbl"><table><thead><tr>
   <th class="sth" style="width:28px;min-width:28px;text-align:right">No.</th><th class="s1 sth resizable-th" style="width:58px;min-width:58px">HKM</th>
   <th class="s2 sth resizable-th" style="width:82px;min-width:82px">Item #</th>
   <th class="s3 sth resizable-th" style="width:220px;min-width:220px;max-width:220px">Description</th>
@@ -2290,6 +2348,17 @@ function hAddCasino(){
 
 
 // ── PASTE FROM MANAGER EXCEL ──
+function clearDraftBid(){
+  if(!DB._isAdmin){toast('Only admins can clear bid prices.','er','Access Denied');return;}
+  if(!S.casino||!S.cat)return;
+  const prefix=`${S.casino.id}|${S.cat}|`;
+  const keys=Object.keys(DB.newB||{}).filter(k=>k.startsWith(prefix));
+  if(!keys.length){toast('No draft bid prices to clear for this category.','wn','Nothing to Clear');return;}
+  if(!confirm(`Clear ${keys.length} draft bid price${keys.length!==1?'s':''} for ${S.casino.name} · ${S.cat}?\n\nThis cannot be undone.`))return;
+  keys.forEach(k=>delete DB.newB[k]);
+  dbSave();render();
+  toast(`Cleared ${keys.length} draft bid price${keys.length!==1?'s':''}. Start fresh!`,'ok','Bids Cleared');
+}
 function openPasteModal(){
   if(!DB._isAdmin){toast('Only admins can paste bid prices.','er','Access Denied');return;}
   document.getElementById('paste-area').value='';
@@ -3793,6 +3862,7 @@ function rAnalyticsDetail(){
   }).join('');
   return`
 <div class="sticky-ctrl">
+<button class="back-btn" onclick="S.anCasino='${cid}';S.anPeriod='${period}';nav('analytics')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Analytics</button>
 <div style="font-size:12px;color:var(--tx2);margin-bottom:10px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
   <span style="cursor:pointer;color:var(--tx3)" onclick="nav('analytics')">Analytics</span>
   <span style="color:var(--bd2)">›</span>
@@ -3826,7 +3896,7 @@ function rAnalyticsDetail(){
 <div style="margin-bottom:14px"></div>
 ${items.length===0
   ?`<div class="an-empty">No items in this category.</div>`
-  :`<div class="tw"><table class="t1">
+  :`<div class="tw twh"><table class="t1">
   <thead><tr>
     <th>No.</th>
     <th>HKM</th>
@@ -3927,6 +3997,7 @@ function rItemPurchaseDetail(){
   const fobOpts=fobSummary.map(([f,c])=>`<option value="${f.replace(/"/g,'&quot;')}"${fobFilter===f?' selected':''}>${f}</option>`).join('');
   return`
 <div class="sticky-ctrl">
+<button class="back-btn" onclick="S.anCasino='${cid}';nav('analytics')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Analytics</button>
 <div style="font-size:12px;color:var(--tx2);margin-bottom:10px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
   <span style="cursor:pointer;color:var(--tx3)" onclick="nav('analytics')">Analytics</span>
   <span style="color:var(--bd2)">&rsaquo;</span>
@@ -3975,7 +4046,7 @@ ${fobSummary.length>1?`<div style="display:flex;align-items:center;justify-conte
 </div>`}
 ${purchases.length===0
   ?`<div class="an-empty">No purchase history found${fobFilter?' for this FOB filter':' for this item'}. ${fobFilter?'Try selecting a different department.':'Re-upload QBE Purchase History to populate this data.'}</div>`
-  :`<div class="tw"><table class="t1">
+  :`<div class="tw twh"><table class="t1">
   <thead><tr>
     <th>No.</th>
     <th>Date</th>
@@ -4087,6 +4158,7 @@ function rPurchaseHistory(){
   }).join('');
   return`
 <div class="sticky-ctrl">
+<button class="back-btn" onclick="S.anCasino='${cid}';nav('analytics')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Analytics</button>
 <div style="font-size:12px;color:var(--tx2);margin-bottom:10px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
   <span style="cursor:pointer;color:var(--tx3)" onclick="nav('analytics')">Analytics</span>
   <span style="color:var(--bd2)">&rsaquo;</span>
@@ -4152,7 +4224,7 @@ function rPurchaseHistory(){
 </div>
 ${filtered.length===0
   ?`<div class="an-empty">No purchase history found${fobFilter||itemFilter||searchFilter?' for this filter':''}. ${!allRows.length?'Upload QBE Purchase History to populate this data.':'Try adjusting your filters.'}</div>`
-  :`<div class="tw"><table class="t1">
+  :`<div class="tw twh"><table class="t1">
   <thead><tr>
     <th>No.</th>
     <th>Item Code</th>
@@ -4852,10 +4924,11 @@ function rBidOverview(){
   </tr>`).join('');
 
   return`
+<button class="back-btn" onclick="nav('dashboard')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Dashboard</button>
 <div style="font-size:12px;color:var(--tx2);margin-bottom:10px;display:flex;align-items:center;gap:5px">
   <span style="cursor:pointer;color:var(--tx3)" onclick="nav('dashboard')">Dashboard</span>
   <span style="color:var(--bd2)">\u203a</span>
-  <span style="color:var(--navy);font-weight:700">${casino.name}</span>
+  <span style="color:var(--tx3)">${casino.name}</span>
   <span style="color:var(--bd2)">\u203a</span>
   <span style="color:var(--navy);font-weight:700">Bid Overview</span>
 </div>
