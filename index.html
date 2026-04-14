@@ -597,7 +597,19 @@ let DB={
 // ── DATA PERSISTENCE (localStorage + Supabase sync) ──
 function dbLoad(){
   try{const s=localStorage.getItem('hkm_db');if(s)Object.assign(DB,JSON.parse(s));}catch(e){}
-  if(DB.periods&&DB.periods.length>1)DB.periods=sortedPeriods();
+  // Sort periods by date descending (inline to avoid dependency on sortedPeriods which is defined later)
+  if(DB.periods&&DB.periods.length>1){
+    DB.periods.sort((a,b)=>{
+      const parse=p=>{
+        if(!p||!p.dt)return 0;
+        const m=String(p.dt).match(/(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})/);
+        if(!m)return 0;
+        const yr=parseInt(m[3]);
+        return new Date(yr<100?(yr<50?2000+yr:1900+yr):yr,parseInt(m[1])-1,parseInt(m[2])).getTime();
+      };
+      return parse(b)-parse(a);
+    });
+  }
 }
 function dbSave(){
   DB._savedAt=new Date().toISOString(); // timestamp for conflict resolution
