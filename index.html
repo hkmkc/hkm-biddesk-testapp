@@ -2228,7 +2228,9 @@ function saveBid(){
   const fromEl=document.getElementById('eff-from');
   const toEl=document.getElementById('eff-to');
   if(!fromEl||!toEl||!fromEl.value||!toEl.value){
-    sal('bal','Set both Effective Through dates before saving.','er',0); return;
+    sal('bal','Set both Effective Through dates before saving.','er',0);
+    toast('Please set both Effective Through dates (From and To) before submitting the bid.','er','Missing Dates');
+    return;
   }
   const from=new Date(fromEl.value+'T12:00:00');
   const to=new Date(toEl.value+'T12:00:00');
@@ -2452,8 +2454,10 @@ function copyDraftBid(){
   });
   navigator.clipboard.writeText(lines.join('\n')).then(()=>{
     sal('bal','Bid prices copied — paste into Col 9 (Bid Price) of the casino sheet.','ok');
+    toast(`${lines.length} bid price${lines.length!==1?'s':''} copied to clipboard.<br>Paste into Col 9 (Bid Price) of the casino sheet.`,'ok','Bid Prices Copied',5000);
   }).catch(()=>{
     sal('bal','Copy failed — try again or use Ctrl+C.','er');
+    toast('Clipboard copy failed. Try again or use Ctrl+C.','er','Copy Failed');
   });
 }
 
@@ -2477,6 +2481,7 @@ function copyLpData(){
     toast(`${its.length} rows copied: LP Date, LP Price, Vol 365D/90D/30D/7D, 365D Rev.<br>Paste directly into your Google Sheet.`,'ok','LP Data Copied',5000);
   }).catch(()=>{
     sal('bal','Copy failed — try again or use Ctrl+C.','er');
+    toast('Clipboard copy failed. Try again or use Ctrl+C.','er','Copy Failed');
   });
 }
 
@@ -2535,11 +2540,22 @@ function phaseA(v365) {
   return 'STRONG';
 }
 
-// Phase B: trend
-function phaseB(v365, v90, v30, v7) {
+// Phase B: trend (SOP v5.1)
+// Spike: R90<0.15 AND (R30>0.08 OR R7>0.03)
+// Accelerating: R90>0.30 AND R30>0.10  OR  7D Boost Rule
+// Decelerating: R90<0.15 AND R30<0.03
+// 7D Boost: expected interval > 14 days AND 7D > 0 AND days since LP < 1.5x interval → Accelerating
+function phaseB(v365, v90, v30, v7, lpDateStr) {
   if (!v365 || v365 === 0) return 'UNKNOWN';
   const r90 = v90/v365, r30 = v30/v365, r7 = (v7||0)/v365;
-  if (r30 >= SOP.trendSpikeR30min && r7 >= SOP.trendSpikeR7min) return 'SPIKE';
+  // Spike check (takes precedence): R90<0.15 AND (R30>0.08 OR R7>0.03)
+  if (r90 < SOP.trendDecR90max && (r30 > SOP.trendSpikeR30min || r7 > SOP.trendSpikeR7min)) return 'SPIKE';
+  // 7D Boost Rule: applies to slow-moving items that just got a recent purchase
+  if (v7 > 0 && lpDateStr) {
+    const expectedInterval = 365 / v365;
+    const daysLp = daysSince(lpDateStr);
+    if (expectedInterval > 14 && daysLp < 1.5 * expectedInterval) return 'ACCELERATING';
+  }
   if (r90 >= SOP.trendAccR90min && r30 >= SOP.trendAccR30min) return 'ACCELERATING';
   if (r90 <= SOP.trendDecR90max && r30 <= SOP.trendDecR30max) return 'DECELERATING';
   return 'STEADY';
@@ -2560,15 +2576,14 @@ function phaseC(v365, v30, lpDateStr) {
 // Full demand signal from Phases A+B+C
 function demandSignal(lps) {
   const v365 = lps.v365||0, v90 = lps.v90||0, v30 = lps.v30||0, v7 = lps.v7||0;
-  const vol90 = lps.vol90||0;
 
-  // Activity gate
-  if (vol90 === 0) return {action:'HOLD', note:'Inactive'};
+  // Activity gate — v90 = 0 means no orders in 90 days → INACTIVE
+  if (v90 === 0) return {action:'HOLD', note:'Inactive'};
 
   const baseline = phaseA(v365);
   if (baseline === 'UNKNOWN') return {action:'HOLD', note:'No history'};
 
-  const trend    = phaseB(v365, v90, v30, v7);
+  const trend    = phaseB(v365, v90, v30, v7, lps.lpDate);
   const recency  = phaseC(v365, v30, lps.lpDate);
 
   // Spike → always try to increase
@@ -2577,31 +2592,59 @@ function demandSignal(lps) {
     return {action:'INCREASE', note:'Spike'};
   }
 
-  // Strong + Accelerating
-  if (baseline === 'STRONG' && trend === 'ACCELERATING') {
-    if (recency === 'ON_SCHEDULE') {
+  // Phase D: Combined Signal Matrix (SOP v5.1)
+
+  // STRONG baseline
+  if (baseline === 'STRONG') {
+    // Strong + Accelerating + On Schedule → INCREASE
+    if (trend === 'ACCELERATING' && recency === 'ON_SCHEDULE') {
       if (SOP.increaseRequires7d && v7 === 0) return {action:'HOLD', note:'Acc/no 7D'};
       return {action:'INCREASE', note:'Strong+Acc'};
     }
-    return {action:'HOLD', note:'Acc/Lagging'};
+    // Strong + Steady + On Schedule → HOLD (aligned)
+    if (trend === 'STEADY' && recency === 'ON_SCHEDULE') return {action:'HOLD', note:'Strong+Aligned'};
+    // Strong + Steady/Accel + Lagging → DECREASE (Strong but Lagging)
+    if ((trend === 'STEADY' || trend === 'ACCELERATING') && recency !== 'ON_SCHEDULE') {
+      if (v30 === 0) return {action:'HOLD', note:'Dec gate (v30=0)'};
+      return {action:'DECREASE', note:'Strong but Lagging'};
+    }
+    // Strong + Decelerating → DECREASE
+    if (trend === 'DECELERATING') {
+      if (v30 === 0) return {action:'HOLD', note:'Dec gate (v30=0)'};
+      return {action:'DECREASE', note:'Decelerating'};
+    }
   }
 
-  // Moderate + Accelerating
-  if (baseline === 'MODERATE' && trend === 'ACCELERATING' && recency === 'ON_SCHEDULE') {
-    if (SOP.increaseRequires7d && v7 === 0) return {action:'HOLD', note:'ModAcc/no 7D'};
-    return {action:'INCREASE', note:'Mod+Acc'};
+  // MODERATE baseline
+  if (baseline === 'MODERATE') {
+    // Moderate + Accelerating + On Schedule → INCREASE
+    if (trend === 'ACCELERATING' && recency === 'ON_SCHEDULE') {
+      if (SOP.increaseRequires7d && v7 === 0) return {action:'HOLD', note:'ModAcc/no 7D'};
+      return {action:'INCREASE', note:'Mod+Acc'};
+    }
+    // Moderate + Steady + On Schedule → HOLD
+    if (trend === 'STEADY' && recency === 'ON_SCHEDULE') return {action:'HOLD', note:'Mod+Aligned'};
+    // Moderate + Any + Lagging/Sig.Lag → DECREASE
+    if (recency !== 'ON_SCHEDULE') {
+      if (v30 === 0) return {action:'HOLD', note:'Dec gate (v30=0)'};
+      return {action:'DECREASE', note:'Moderate Lagging'};
+    }
   }
 
-  // Decelerating → DECREASE candidate
+  // WEAK baseline with recovery
+  if (baseline === 'WEAK') {
+    if ((trend === 'ACCELERATING' || trend === 'SPIKE') && recency === 'ON_SCHEDULE' && v30 >= 2) {
+      return {action:'HOLD', note:'Weak/Recovering'};
+    }
+    return {action:'HOLD', note:'Weak'};
+  }
+
+  // Decelerating catch-all (non-Strong/Moderate already handled above)
   if (trend === 'DECELERATING') {
     if (recency === 'ON_SCHEDULE') return {action:'HOLD', note:'Dec/OnSched'};
-    // Decrease gate: v30 must be > 0
-    if (v30 === 0) return {action:'HOLD', note:'Dec gate'};
+    if (v30 === 0) return {action:'HOLD', note:'Dec gate (v30=0)'};
     return {action:'DECREASE', note:'Decelerating'};
   }
-
-  // Weak with some recovery
-  if (baseline === 'WEAK' && v30 >= 2) return {action:'HOLD', note:'Weak/Recovering'};
 
   return {action:'HOLD', note:baseline+'/'+trend};
 }
@@ -2609,11 +2652,11 @@ function demandSignal(lps) {
 // Demand Class label — matches output format from SOP sheet
 function demandClass(lps) {
   if (!lps || !lps.lpDate) return 'Unknown';
-  const v365=lps.v365||0,v90=lps.v90||0,v30=lps.v30||0,v7=lps.v7||0,vol90=lps.vol90||0;
-  if (vol90===0) return 'Inactive';
+  const v365=lps.v365||0,v90=lps.v90||0,v30=lps.v30||0,v7=lps.v7||0;
+  if (v90===0) return 'Inactive';
   const baseline=phaseA(v365);
   if (baseline==='UNKNOWN') return 'Unknown';
-  const trend=phaseB(v365,v90,v30,v7);
+  const trend=phaseB(v365,v90,v30,v7,lps.lpDate);
   const recency=phaseC(v365,v30,lps.lpDate);
   if (trend==='SPIKE') return 'Spike';
   if (baseline==='STRONG' && trend==='ACCELERATING') return 'Strong & Accelerating';
@@ -2671,8 +2714,8 @@ function runAutoPrice() {
       if (costDelta > 0) increases++; else decreases++;
     } else {
       // ── STEP 2: Activity Gate — v90 = 0 → INACTIVE ──
-      const vol90 = lps.vol90 || 0;
-      if (vol90 === 0) {
+      const v90check = lps.v90 || 0;
+      if (v90check === 0) {
         // Inactive: only raise for margin floor, never lower
         if (acCost && lb < acCost / (1 - SOP.marginFloor)) {
           newPrice = Math.ceil((acCost / (1 - SOP.marginFloor)) / sopStep(lb)) * sopStep(lb);
