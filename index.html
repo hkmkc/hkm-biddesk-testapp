@@ -31,18 +31,42 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:var(--tx)
 .bci{cursor:pointer;padding:3px 7px;border-radius:4px;transition:.15s;white-space:nowrap;color:var(--tx2)}.bci:hover{color:var(--navy);background:var(--bg3)}.bci.on{color:var(--navy);font-weight:700}
 .bcs{color:var(--bd2)}
 #tr{display:flex;gap:8px;margin-left:auto;padding-right:16px}
+#top-meta{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--tx2);padding-right:14px;white-space:nowrap;flex-shrink:0}
+#top-meta .tm-date{font-weight:700;color:var(--navy)}
+#top-meta .tm-time{color:var(--tx2);font-weight:500}
+#top-meta .tm-sep{color:var(--bd2);font-weight:300;font-size:14px}
+#top-meta .tm-user{font-weight:600;color:var(--navy);font-size:11px;display:flex;align-items:center;gap:3px}
+#top-meta .tm-user-badge{display:inline-flex;align-items:center;gap:5px;background:var(--navy);color:#fff;padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;box-shadow:0 1px 3px rgba(27,92,158,.25)}
+#top-meta .tm-user-badge svg{opacity:.9}
+#top-meta .tm-user-name{font-weight:700}
+#top-meta .tm-user-role{font-weight:500;opacity:.8;padding-left:5px;margin-left:3px;border-left:1px solid rgba(255,255,255,.3);font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+@media(max-width:900px){#top-meta .tm-date-full{display:none}#top-meta .tm-date-short{display:inline}}
+@media(min-width:901px){#top-meta .tm-date-short{display:none}#top-meta .tm-date-full{display:inline}}
 #layout{display:flex;height:calc(100vh - 54px);overflow:hidden}
-#sb{width:var(--sbw);background:var(--navy);flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
+#sb{width:var(--sbw);background:var(--navy);flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;transition:width .2s ease}
+#sb-content{flex:1;overflow-y:auto;overflow-x:hidden}
+#sb-collapse-btn{flex-shrink:0;height:40px;border-top:1.5px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:9px;padding:0 22px;cursor:pointer;color:rgba(255,255,255,.75);font-size:13px;font-weight:500;transition:.15s;background:rgba(0,0,0,.18);user-select:none;font-family:inherit}
+#sb-collapse-btn:hover{color:#fff;background:rgba(0,0,0,.32)}
+#sb-collapse-btn .sb-icon{width:18px;text-align:center;flex-shrink:0;opacity:.85;display:flex;align-items:center;justify-content:center}
+#sb-collapse-btn svg{flex-shrink:0;transition:transform .2s}
+body.sb-collapsed #sb{width:56px}
+body.sb-collapsed #bar-logo{width:56px;padding:0;justify-content:center}
+body.sb-collapsed #bar-logo > div{display:none}
+body.sb-collapsed #sb-content .sb-sec,body.sb-collapsed #sb-content .sb-lbl,body.sb-collapsed #sb-content .sb-casino-hd,body.sb-collapsed #sb-content .sb-cat,body.sb-collapsed #sb-content .sb-add,body.sb-collapsed #sb-content .sb-divider{display:none}
+body.sb-collapsed #sb-content .sb-item{justify-content:center;padding:10px 0;margin:1px 6px}
+body.sb-collapsed #sb-content .sb-cat-hd{justify-content:center;padding:9px 0;margin:1px 6px}
+body.sb-collapsed #sb-collapse-btn .sb-collapse-lbl{display:none}
+body.sb-collapsed #sb-collapse-btn svg{transform:rotate(180deg)}
 .sb-sec{padding:18px 16px 5px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.35)}
 .sb-item{display:flex;align-items:center;gap:9px;padding:9px 14px;cursor:pointer;transition:.12s;color:rgba(255,255,255,.75);font-size:13px;font-weight:500;border-radius:6px;margin:1px 8px}
 .sb-item:hover{background:rgba(255,255,255,.12);color:#fff}
 .sb-item.on{background:var(--gold);color:#1a2a3a;font-weight:700}
 .sb-icon{width:18px;text-align:center;flex-shrink:0;opacity:.85;display:flex;align-items:center;justify-content:center}.sb-icon svg{display:block}
-.sb-divider{height:1px;background:rgba(255,255,255,.08);margin:6px 16px}
+.sb-divider{height:2px;background:var(--gold);margin:14px 12px;border-radius:1px;flex-shrink:0}
 .sb-cat-hd{display:flex;align-items:center;gap:9px;padding:9px 14px;color:rgba(255,255,255,.75);font-size:13px;font-weight:500;border-radius:6px;margin:1px 8px}
 .sb-casino-hd{padding:8px 14px;font-size:12px;font-weight:500;color:rgba(255,255,255,.65);display:flex;align-items:center;justify-content:space-between;gap:6px;cursor:pointer;transition:.12s;border-radius:6px;margin:1px 8px}
 .sb-casino-hd:hover{background:rgba(255,255,255,.1);color:#fff}
-.sb-casino-hd.on{color:#fff;font-weight:700;background:rgba(240,180,41,.22);border-left:3px solid var(--gold);padding-left:11px}
+.sb-casino-hd.on{color:#fff;font-weight:700;background:linear-gradient(90deg,rgba(240,180,41,.28),rgba(240,180,41,.15));border-left:4px solid var(--gold);padding-left:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
 .sb-casino-hd .chev{flex-shrink:0;opacity:.55;transition:transform .2s;display:flex;align-items:center}
 .sb-casino-hd.open .chev{transform:rotate(180deg);opacity:.9}
 .sb-casino-hd.on .chev{opacity:.85}
@@ -53,7 +77,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:var(--tx)
 .sb-cat-c{font-size:10px;opacity:.5}
 .sb-add{padding:6px 14px 6px 32px;font-size:11px;color:rgba(255,255,255,.28);cursor:pointer;transition:.15s;border-radius:8px;margin:1px 8px}
 .sb-add:hover{color:rgba(255,255,255,.65);background:rgba(255,255,255,.06)}
-#main{flex:1;padding:22px;overflow-y:auto;overflow-x:hidden;background:#fff}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fff}
+#main-content{flex:1;padding:22px;overflow-y:auto;overflow-x:hidden}
+#app-footer{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:6px 22px;border-top:1.5px solid var(--bd);background:var(--bg2);font-size:11px;color:var(--tx2);gap:12px;flex-wrap:nowrap;height:40px;overflow:hidden}
+#app-footer .pgbar-l{display:flex;align-items:center;gap:6px;white-space:nowrap}
+#app-footer .pgbar-r{display:flex;align-items:center;gap:3px;white-space:nowrap}
+#app-footer .app-brand{font-size:10px;color:var(--tx3);white-space:nowrap;margin-left:auto}
 .btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:var(--r);border:1px solid var(--bd2);cursor:pointer;font-size:12px;font-weight:700;background:var(--bg2);color:var(--tx);transition:.15s;white-space:nowrap;font-family:inherit}
 .btn:hover{background:var(--bg3)}
 .btn-nv{background:var(--navy);color:#fff;border-color:var(--navy)}.btn-nv:hover{background:var(--navy2)}
@@ -172,7 +201,7 @@ input:focus,select:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 
 .pgbtn:hover:not(:disabled){background:var(--bg3)}
 .pgbtn:disabled{opacity:.35;cursor:default}
 .pgbtn.on{background:var(--navy);color:#fff;border-color:var(--navy)}
-.pgsz{padding:4px 7px;border-radius:5px;border:1px solid var(--bd2);font-size:11px;background:var(--bg2);color:var(--tx);cursor:pointer}
+.pgsz{padding:3px 6px;border-radius:4px;border:1px solid var(--bd2);font-size:11px;background:#fff;color:var(--tx);cursor:pointer}
 /* ── Sticky controls bar ── */
 .sticky-tabs{position:sticky;top:0;z-index:31;background:#fff;padding:4px 0 4px;border-bottom:1px solid var(--bd)}
 .sticky-ctrl{position:sticky;top:var(--sticky-tabs-h,0px);z-index:30;background:#fff;padding:6px 0 4px;margin-bottom:8px;border-bottom:1px solid var(--bd);box-shadow:0 -20px 0 0 #fff,0 -40px 0 0 #fff}
@@ -485,11 +514,21 @@ tr:hover .del-row{opacity:1}
     </div>
   </div>
   <div id="bc"></div>
+  <div id="top-meta"></div>
   <div id="tr"></div>
 </div>
 <div id="layout">
-  <div id="sb"></div>
-  <div id="main"></div>
+  <div id="sb">
+    <div id="sb-content"></div>
+    <div id="sb-collapse-btn" onclick="toggleSidebar()" title="Collapse navigation">
+      <span class="sb-collapse-lbl">Collapse</span>
+      <span class="sb-icon" style="margin-left:auto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span>
+    </div>
+  </div>
+  <div id="main">
+    <div id="main-content"></div>
+    <div id="app-footer"></div>
+  </div>
 </div>
 <!-- PASTE FROM EXCEL MODAL -->
 <div id="paste-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center">
@@ -629,6 +668,7 @@ dbLoad();
 setTimeout(()=>sbLoad(true), 500);
 // Background poll every 60s — never triggers render (no scroll reset, no lost work)
 setInterval(()=>{if(SB)sbLoad(false);}, 60000);
+setInterval(()=>{if(typeof rTopMeta==='function')rTopMeta();}, 60000);
 
 // ── STATE ──
 const S={
@@ -714,14 +754,19 @@ const tdl=()=>{const d=new Date();return(d.getMonth()+1).toString().padStart(2,'
 function render(){
   if(!DB._isAdmin&&S.view==='upload'){S.view='upload';} // show upload but with lock screen
   updateHash();
-  rBC();rTR();rSB();
-  const el=document.getElementById('main');
+  rBC();rTR();rSB();rTopMeta();
+  _footerPg=null; // Reset pagination for footer
+  const el=document.getElementById('main-content');
+  if(!el)return;
   // Save scroll positions before destroying DOM
   const mainScrollY=el.scrollTop;
   const twh=el.querySelector('.twh');
   const twhScrollX=twh?twh.scrollLeft:0;
   const fn={dashboard:rDash,casino:rCasino,bids:rBids,upload:rUpload,bidoverview:rBidOverview,analytics:rAnalytics,analyticsDetail:rAnalyticsDetail,itemPurchaseDetail:rItemPurchaseDetail,purchaseHistory:rPurchaseHistory};
   el.innerHTML=(fn[S.view]||rDash)();
+  // Render footer
+  const ftr=document.getElementById('app-footer');
+  if(ftr)ftr.innerHTML=rAppFooter();
   // Restore scroll positions after render
   el.scrollTop=mainScrollY;
   const newTwh=el.querySelector('.twh');
@@ -732,7 +777,7 @@ function render(){
     document.documentElement.style.setProperty('--sticky-tabs-h', st?(st.offsetHeight+1)+'px':'0px');
   });
 }
-function nav(v,o={}){Object.assign(S,{view:v},...[o]);updateHash();render();}
+function nav(v,o={}){const viewChanged=S.view!==v;Object.assign(S,{view:v},...[o]);if(viewChanged){S.pgSz=undefined;S.pg={};}updateHash();render();}
 
 function updateHash(){
   let h='dashboard';
@@ -792,24 +837,30 @@ function restoreFromHash(){
   }
 }
 
+function toggleSidebar(){
+  document.body.classList.toggle('sb-collapsed');
+  try{localStorage.setItem('hkm_sb_collapsed',document.body.classList.contains('sb-collapsed')?'1':'0');}catch(e){}
+}
+// Restore collapsed state on load
+try{if(localStorage.getItem('hkm_sb_collapsed')==='1')document.body.classList.add('sb-collapsed');}catch(e){}
 function rSB(){
-  const el=document.getElementById('sb');
+  const el=document.getElementById('sb-content');
   if(!el)return;
   let h='<div class="sb-sec">Navigation</div>';
   const _icoDash=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`;
   const _icoAn=`<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="17" width="4" height="5" rx="2"/><rect x="9" y="9" width="4" height="13" rx="2"/><rect x="16" y="3" width="4" height="19" rx="2"/></svg>`;
   const _icoUp=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/><path d="M20 18v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2"/></svg>`;
-  h+=`<div class="sb-item ${S.view==='dashboard'?'on':''}" onclick="nav('dashboard')"><span class="sb-icon">${_icoDash}</span> Dashboard</div>`;
-  h+=`<div class="sb-item ${S.view==='analytics'?'on':''}" onclick="nav('analytics')"><span class="sb-icon">${_icoAn}</span> Analytics</div>`;
-  h+=`<div class="sb-item ${S.view==='upload'?'on':''}" onclick="nav('upload')"><span class="sb-icon">${_icoUp}</span> Upload Hub</div>`;
+  h+=`<div class="sb-item ${S.view==='dashboard'?'on':''}" onclick="nav('dashboard')"><span class="sb-icon">${_icoDash}</span><span class="sb-lbl">Dashboard</span></div>`;
+  h+=`<div class="sb-item ${S.view==='analytics'?'on':''}" onclick="nav('analytics')"><span class="sb-icon">${_icoAn}</span><span class="sb-lbl">Analytics</span></div>`;
+  h+=`<div class="sb-item ${S.view==='upload'?'on':''}" onclick="nav('upload')"><span class="sb-icon">${_icoUp}</span><span class="sb-lbl">Upload Hub</span></div>`;
   h+='<div class="sb-divider"></div>';
   const _icoCasinos=`<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><defs><polygon id="hkm5star" points="0,-2 0.5,-0.688 1.902,-0.618 0.808,0.263 1.176,1.618 0,0.85 -1.176,1.618 -0.808,0.263 -1.902,-0.618 -0.5,-0.688"/></defs><use href="#hkm5star" transform="translate(2.5,3)"/><use href="#hkm5star" transform="translate(7,3)"/><use href="#hkm5star" transform="translate(11.5,3)"/><use href="#hkm5star" transform="translate(16.5,3)"/><use href="#hkm5star" transform="translate(21.5,3)"/><path fill-rule="evenodd" d="M1,7 H23 V23 H1 Z M4,10 H8.5 V14.5 H4 Z M10,10 H14 V14.5 H10 Z M15.5,10 H20 V14.5 H15.5 Z M9.5,17.5 H14.5 V23 H9.5 Z"/></svg>`;
-  h+=`<div class="sb-cat-hd"><span class="sb-icon">${_icoCasinos}</span> Casinos</div>`;
+  h+=`<div class="sb-cat-hd" onclick="if(document.body.classList.contains('sb-collapsed'))toggleSidebar()" style="cursor:pointer" title="Casinos — click to expand when collapsed"><span class="sb-icon">${_icoCasinos}</span><span class="sb-lbl">Casinos</span></div>`;
   const sortedCasinos=[...DB.casinos].sort((a,b)=>a.name.localeCompare(b.name));
   sortedCasinos.forEach(c=>{
     const open=DB._openC&&DB._openC[c.id];
     const _chevDown=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 12 16 19 9"/></svg>`;
-    const isActiveCasino=(S.casino&&S.casino.id===c.id)||(S.view==='bidoverview'&&S.ovCasino&&S.ovCasino.id===c.id);
+    const isActiveCasino=((S.view==='casino'||S.view==='bids')&&S.casino&&S.casino.id===c.id)||(S.view==='bidoverview'&&S.ovCasino&&S.ovCasino.id===c.id);
     h+=`<div class="sb-casino-hd ${open?'open':''} ${isActiveCasino?'on':''}" onclick="sbToggle('${c.id}')" oncontextmenu="sbCtxCasino(event,'${c.id}')">${c.name}<span class="chev">${_chevDown}</span></div>`;
     if(open){
       const sortedCats=[...c.cats].sort((a,b)=>a.localeCompare(b));
@@ -939,6 +990,20 @@ function confirmSbDelete(){
 function closeSbDeleteModal(){document.getElementById('sb-delete-modal').style.display='none';}
 function rBC(){
   document.getElementById('bc').innerHTML='';
+}
+function rTopMeta(){
+  const el=document.getElementById('top-meta');
+  if(!el)return;
+  const now=new Date();
+  const dFull=now.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  const dShort=now.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',weekday:'short',month:'short',day:'numeric'});
+  const t=now.toLocaleTimeString('en-US',{timeZone:'America/Los_Angeles',hour:'2-digit',minute:'2-digit'});
+  const cu=DB._currentUser;
+  const userName=cu?(cu.name||cu.email||'').trim():'';
+  const userRole=cu?(DB._isAdmin?'Admin':'Member'):'';
+  const userIco=`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
+  const userBadge=cu?`<span class="tm-sep">·</span><span class="tm-user-badge">${userIco}<span class="tm-user-name">${userName||userRole}</span>${userName?`<span class="tm-user-role">${userRole}</span>`:''}</span>`:'';
+  el.innerHTML=`<span class="tm-date tm-date-full">${dFull}</span><span class="tm-date tm-date-short">${dShort}</span><span class="tm-sep">·</span><span class="tm-time">${t} PST</span>${userBadge}`;
 }
 function rTR(){
   const el=document.getElementById('tr');
@@ -3003,39 +3068,55 @@ function importPriceListMaster(file){
 // ══════════════════════════════════════════════════════════════
 
 // ── Pagination ──
+let _footerPg=null; // stores current page's pagination data for the footer
 function doPg(items, key){
   const page=S.pg[key]||0, sz=S.pgSz||10;
   const total=items.length;
   const start=page*sz, end=Math.min(start+sz,total);
-  return{items:items.slice(start,end),total,page,pgSz:sz,start,end};
+  const pgd={items:items.slice(start,end),total,page,pgSz:sz,start,end,key};
+  _footerPg=pgd; // register for footer
+  return pgd;
 }
 function rPgBar(pgd,key){
+  // Legacy inline pagination — now handled by the fixed footer
+  // Still register the pagination data for the footer to pick up
+  if(pgd)_footerPg={...pgd,key};
+  return'';
+}
+function _rPgControls(pgd,key){
   if(!pgd||pgd.total===0)return'';
   const total=pgd.total, page=pgd.page||0, pgSz=pgd.pgSz||S.pgSz||10;
   const pages=Math.ceil(total/pgSz);
   const start=(page*pgSz)+1, end=Math.min((page+1)*pgSz,total);
-  // Page number buttons
   let btns='';
   for(let i=0;i<pages;i++){
     if(pages<=7||i===0||i===pages-1||Math.abs(i-page)<=1){
       btns+=`<button class="pgbtn${page===i?' on':''}" onclick="S.pg['${key}']=${i};render()">${i+1}</button>`;
     } else if(Math.abs(i-page)===2){
-      btns+='<span style="padding:0 3px;color:var(--tx3);font-size:11px">…</span>';
+      btns+='<span style="padding:0 3px;color:var(--tx3);font-size:11px">\u2026</span>';
     }
   }
-  return`<div class="pgbar">
+  return`
     <div class="pgbar-l">
-      <span style="color:var(--tx3)">${start}–${end} of ${total} items</span>
+      <span>Rows per page:</span>
       <select class="pgsz" title="Rows per page" onchange="S.pgSz=parseInt(this.value);S.pg={};render()">
-        ${[10,20,30,50,75,100].map(n=>`<option value="${n}"${(pgSz||10)===n?' selected':''}>${n} per page</option>`).join('')}
+        ${[10,20,30,50,75,100].map(n=>`<option value="${n}"${(pgSz||10)===n?' selected':''}>${n}</option>`).join('')}
       </select>
+      <span style="margin-left:8px;color:var(--tx3)">Showing ${start}\u2013${end} of ${total}</span>
+      <span style="color:var(--tx3)">\u00b7 Page ${page+1} of ${pages}</span>
     </div>
     <div class="pgbar-r">
-      <button class="pgbtn" onclick="S.pg['${key}']=${Math.max(0,page-1)};render()" ${page===0?'disabled':''}>&larr; Prev</button>
+      <button class="pgbtn" onclick="S.pg['${key}']=${Math.max(0,page-1)};render()" ${page===0?'disabled':''}>\u2039</button>
       ${btns}
-      <button class="pgbtn" onclick="S.pg['${key}']=${Math.min(pages-1,page+1)};render()" ${page>=pages-1?'disabled':''}>Next &rarr;</button>
-    </div>
-  </div>`;
+      <button class="pgbtn" onclick="S.pg['${key}']=${Math.min(pages-1,page+1)};render()" ${page>=pages-1?'disabled':''}>\u203a</button>
+    </div>`;
+}
+function rAppFooter(){
+  const brand='<span class="app-brand">HKM BidDesk \u00b7 Hong Kong Market</span>';
+  if(_footerPg&&_footerPg.total>0){
+    return _rPgControls(_footerPg,_footerPg.key)+brand;
+  }
+  return`<div></div>${brand}`;
 }
 
 // ── Filters ──
@@ -3506,9 +3587,24 @@ function rAnSection(cid,data,period,label,threshold){
 function rAnalytics(){
   const casinos=[...DB.casinos].sort((a,b)=>a.name.localeCompare(b.name));
   if(!casinos.length)return`<div class="al a-wn show">No casinos configured. Set up casinos in the Upload Hub first.</div>`;
-  if(!S.anCasino)S.anCasino=casinos[0].id;
+  // Apply Bid Type filter
+  const anFilter=S.anFilter||'all';
+  const filteredCasinos=casinos.filter(c=>{
+    if(anFilter==='all')return true;
+    const cats=c.cats||[];
+    if(anFilter==='weekly')return cats.some(cat=>/^WEEKLY_/i.test(cat));
+    if(anFilter==='monthly')return cats.some(cat=>/^MTH_|^MONTHLY_/i.test(cat));
+    return true;
+  });
+  // Auto-switch casino if current selection is excluded by the filter
+  if(filteredCasinos.length&&!filteredCasinos.find(c=>c.id===S.anCasino)){
+    S.anCasino=filteredCasinos[0].id;
+    S.anPeriod=null;
+  }
+  if(!S.anCasino)S.anCasino=(filteredCasinos[0]||casinos[0]).id;
   const filterCid=S.anCasino;
-  const casinoOpts=casinos.map(c=>`<option value="${c.id}"${c.id===filterCid?' selected':''}>${c.name}</option>`).join('');
+  const casinoSource=filteredCasinos.length?filteredCasinos:casinos;
+  const casinoOpts=casinoSource.map(c=>`<option value="${c.id}"${c.id===filterCid?' selected':''}>${c.name}</option>`).join('');
   const result=calcCasinoAnalytics(filterCid);
   if(!result)return`<div class="al a-er show">Could not load analytics for this casino.</div>`;
   const{casino,weekly,monthly}=result;
@@ -3556,6 +3652,14 @@ function rAnalytics(){
     </div>
   </div>
   <div class="an-controls">
+    <div class="an-ctrl-grp">
+      <label class="an-ctrl-lbl">Filter Casinos By</label>
+      <select class="sel" onchange="S.anFilter=this.value;S.anCasino=null;S.anPeriod=null;render()" style="min-width:140px">
+        <option value="all"${anFilter==='all'?' selected':''}>All</option>
+        <option value="weekly"${anFilter==='weekly'?' selected':''}>Weekly</option>
+        <option value="monthly"${anFilter==='monthly'?' selected':''}>Monthly</option>
+      </select>
+    </div>
     <div class="an-ctrl-grp">
       <label class="an-ctrl-lbl">Casino</label>
       <select class="sel" onchange="S.anCasino=this.value;S.anPeriod=null;render()" style="min-width:200px">${casinoOpts}</select>
@@ -3663,13 +3767,16 @@ function rAnalyticsDetail(){
   if(segment==='winning')sorted.sort((a,b)=>(a.daysDiff||0)-(b.daysDiff||0));
   else if(segment==='losing')sorted.sort((a,b)=>(b.daysDiff||0)-(a.daysDiff||0));
   else sorted.sort((a,b)=>(a.cat||'').localeCompare(b.cat||''));
-  const rows=sorted.map((it,i)=>{
+  const _adPgKey='ad_'+cid+'_'+period+'_'+segment;
+  const _adPgd=doPg(sorted,_adPgKey);
+  const _adOffset=(_adPgd.page||0)*(_adPgd.pgSz||10);
+  const rows=_adPgd.items.map((it,i)=>{
     const lpStr=it.lpDate?it.lpDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
     const dayStr=it.daysDiff!==null?`${it.daysDiff}d ago`:'—';
     const dayCol=it.daysDiff===null?'var(--tx3)':it.daysDiff<=threshold?'var(--green)':'var(--red)';
     const priceStr=it.lpPrice!=null?'$'+parseFloat(it.lpPrice).toFixed(2):'—';
     return`<tr>
-      <td style="color:var(--tx3);font-size:11px">${i+1}</td>
+      <td style="color:var(--tx3);font-size:11px">${_adOffset+i+1}</td>
       <td style="font-weight:700;color:var(--navy);font-size:11px">${it.hkm||'<span class="nc">—</span>'}</td>
       <td style="font-size:11px">${it.item}</td>
       <td class="desc-cell" title="${(it.desc||'').replace(/"/g,'&quot;')}" style="font-size:11px;max-width:220px">${it.desc||'—'}</td>
@@ -3794,14 +3901,17 @@ function rItemPurchaseDetail(){
   const purchases=fobFilter?allPurchases.filter(p=>p.fob===fobFilter):allPurchases;
   const totalAmt=purchases.reduce((s,p)=>s+p.amount,0);
   const totalQty=purchases.reduce((s,p)=>s+(p.qty||0),0);
-  const tRows=purchases.map((p,i)=>{
+  const _ipdPgKey='ipd_'+cid+'_'+hkm;
+  const _ipdPgd=doPg(purchases,_ipdPgKey);
+  const _ipdOffset=(_ipdPgd.page||0)*(_ipdPgd.pgSz||10);
+  const tRows=_ipdPgd.items.map((p,i)=>{
     const dtStr=p.dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     const priceStr=p.price!=null?'$'+parseFloat(p.price).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
     const amtStr=p.amount?'$'+parseFloat(p.amount).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
     const numStr=p.num?String(p.num):'—';
     const qtyStr=p.qty!=null?p.qty:'—';
     return`<tr>
-      <td style="color:var(--tx3);font-size:11px">${i+1}</td>
+      <td style="color:var(--tx3);font-size:11px">${_ipdOffset+i+1}</td>
       <td style="font-size:11px">${dtStr}</td>
       <td style="font-size:11px;font-weight:600">${p.fob}</td>
       <td style="font-size:11px;text-align:center">${qtyStr}</td>
@@ -3950,14 +4060,17 @@ function rPurchaseHistory(){
   const itemList=Object.entries(itemMap).sort((a,b)=>b[1]-a[1]);
   const fobOpts=fobList.map(([f])=>`<option value="${f.replace(/"/g,'&quot;')}"${fobFilter===f?' selected':''}>${f}</option>`).join('');
   const itemOpts=itemList.map(([it])=>`<option value="${it.replace(/"/g,'&quot;')}"${itemFilter===it?' selected':''}>${it}</option>`).join('');
-  const tRows=filtered.slice(0,500).map((r,i)=>{
+  const _phPgKey='ph_'+cid;
+  const _phPgd=doPg(filtered,_phPgKey);
+  const _phOffset=(_phPgd.page||0)*(_phPgd.pgSz||10);
+  const tRows=_phPgd.items.map((r,i)=>{
     const dtStr=r.dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     const priceStr=r.price!=null?'$'+parseFloat(r.price).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
     const amtStr=r.amount?'$'+parseFloat(r.amount).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
     const qtyStr=r.qty!=null?r.qty:'—';
     const numStr=r.num?String(r.num):'—';
     return`<tr>
-      <td style="color:var(--tx3);font-size:11px">${i+1}</td>
+      <td style="color:var(--tx3);font-size:11px">${_phOffset+i+1}</td>
       <td style="font-size:11px;font-weight:700;color:var(--navy);cursor:pointer" onclick="S.anDrillCid='${cid}';S.anItemDrillHkm='${r.hkm}';S.anItemDrillDesc='${r.desc.replace(/'/g,"\\'")}';nav('itemPurchaseDetail')">${r.hkm}</td>
       <td style="font-size:10px;color:var(--tx2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.desc.replace(/"/g,'&quot;')}">${r.desc||'—'}</td>
       <td style="font-size:11px">${dtStr}</td>
@@ -3968,7 +4081,6 @@ function rPurchaseHistory(){
       <td style="font-size:11px;color:var(--tx3)">${numStr}</td>
     </tr>`;
   }).join('');
-  const overLimit=filtered.length>500;
   return`
 <div class="sticky-ctrl">
 <div style="font-size:12px;color:var(--tx2);margin-bottom:10px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
@@ -4049,7 +4161,7 @@ ${filtered.length===0
     <th>Invoice #</th>
   </tr></thead>
   <tbody>${tRows}</tbody>
-</table></div>${overLimit?`<div style="text-align:center;padding:12px;font-size:12px;color:var(--tx3)">Showing first 500 of ${filtered.length} records. Use filters to narrow results.</div>`:''}`}`;
+</table></div>`}`;
 }
 
 function exportPurchaseHistory(fmt='csv'){
@@ -4451,9 +4563,6 @@ function rDash(){
   const mthSubmitted=monthlyDue.filter(dd=>_wfPct(dd.id)===100).length;
   const mthInProgress=monthlyDue.filter(dd=>{const p=_wfPct(dd.id);return p>0&&p<100;}).length;
   const allSorted=[...allDue].sort((a,b)=>getNextDue(a)-getNextDue(b));
-  const _dateStr=now.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',weekday:'long',month:'long',day:'numeric',year:'numeric'});
-  const _timeStr=now.toLocaleTimeString('en-US',{timeZone:'America/Los_Angeles',hour:'2-digit',minute:'2-digit'})+' PST';
-  const _userStr=DB._currentUser?(DB._isAdmin?'👤 Admin':'👤 '+DB._currentUser.name):'';
   const nextWeeklyMs=getNextDue(weeklyDue[0])-now;
   const nextMonthlyMs=getNextDue(monthlyDue[0])-now;
   return`
@@ -4462,10 +4571,6 @@ function rDash(){
     <div>
       <div class="dash-title">Dashboard</div>
       <div class="dash-sub">HKM BidDesk &nbsp;·&nbsp; Hong Kong Market</div>
-    </div>
-    <div class="dash-meta">
-      <div class="dash-meta-date">${_dateStr}</div>
-      <div class="dash-meta-time">${_timeStr}${_userStr?'&nbsp;&nbsp;·&nbsp;&nbsp;'+_userStr:''}</div>
     </div>
   </div>
   <div class="dash-search">
@@ -4540,9 +4645,9 @@ function rDash(){
         const totalItems=(casino.cats||[]).reduce((n,cat)=>n+gI(casino.id,cat).length,0);
         const pricedItems=(casino.cats||[]).reduce((n,cat)=>n+gI(casino.id,cat).filter(it=>getLastBid(casino.id,cat,it.item)!=null).length,0);
         const pct=totalItems?Math.round(pricedItems/totalItems*100):0;
-        return`<div onclick="nav('bidoverview',{ovCasino:${JSON.stringify(casino).replace(/"/g,"'")}})" style="background:#fff;border:1.5px solid var(--bd2);border-radius:8px;padding:8px 11px;box-sizing:border-box;cursor:pointer;transition:.15s;box-shadow:var(--sh)" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--bd2)'">
+        return`<div onclick="nav('bidoverview',{ovCasino:${JSON.stringify(casino).replace(/"/g,"'")}})" style="background:#fff;border:1.5px solid var(--bd2);border-radius:8px;padding:8px 11px;box-sizing:border-box;cursor:pointer;transition:.15s;box-shadow:var(--sh);height:68px;overflow:hidden" onmouseover="this.style.borderColor='var(--navy)'" onmouseout="this.style.borderColor='var(--bd2)'">
           <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${casino.name}</div>
-          <div style="font-size:9px;color:var(--tx3);margin-bottom:5px">${(casino.cats||[]).length} ${(casino.cats||[]).length===1?'category':'categories'} · ${pricedItems}/${totalItems} priced</div>
+          <div style="font-size:9px;color:var(--tx3);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${(casino.cats||[]).length} ${(casino.cats||[]).length===1?'category':'categories'} · ${pricedItems}/${totalItems} priced</div>
           <div style="background:var(--bg3);border-radius:2px;height:3px;overflow:hidden"><div style="background:var(--navy);height:3px;width:${pct}%"></div></div>
           <div style="font-size:9px;color:var(--tx3);margin-top:3px;text-align:right">${pct}%</div>
         </div>`;
@@ -4699,11 +4804,14 @@ function rBidOverview(){
   const cats=casino.cats||[];
   const now=getPST();
   const wkLabel='Week of '+now.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',month:'2-digit',day:'2-digit'});
-  const mthLabel=now.toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',month:'long',year:'numeric'});
+  const nextMonth=new Date(now.getFullYear(),now.getMonth()+1,1);
+  const mthLabel=nextMonth.toLocaleDateString('en-US',{month:'long',year:'numeric'});
 
   const merged={};
+  let hasWeekly=false,hasMonthly=false;
   cats.forEach(cat=>{
     const weekly=isCatWeekly(casino.id,cat);
+    if(weekly)hasWeekly=true; else hasMonthly=true;
     gI(casino.id,cat).forEach(it=>{
       if(!merged[it.item]) merged[it.item]={...it,wPrice:null,mPrice:null};
       if(it.hkm&&!merged[it.item].hkm) merged[it.item].hkm=it.hkm;
@@ -4735,9 +4843,8 @@ function rBidOverview(){
     <td style="font-size:11px;white-space:nowrap">${it.item}</td>
     <td class="desc-cell" data-desc="${(it.desc||'').replace(/"/g,'&quot;')}" style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.desc||''}</td>
     <td style="font-size:11px;color:var(--tx2);text-align:center">${it.unit||''}</td>
-    <td class="pr" style="font-size:12px;font-weight:700">${it.wPrice!=null?'$'+f(it.wPrice):'<span class="nc">\u2014</span>'}</td>
-    <td class="pr" style="font-size:12px;font-weight:700">${it.mPrice!=null?'$'+f(it.mPrice):'<span class="nc">\u2014</span>'}</td>
-    
+    ${hasWeekly?`<td class="pr" style="font-size:12px;font-weight:700">${it.wPrice!=null?'$'+f(it.wPrice):'<span class="nc">\u2014</span>'}</td>`:''}
+    ${hasMonthly?`<td class="pr" style="font-size:12px;font-weight:700">${it.mPrice!=null?'$'+f(it.mPrice):'<span class="nc">\u2014</span>'}</td>`:''}
   </tr>`).join('');
 
   return`
@@ -4772,8 +4879,8 @@ function rBidOverview(){
     <col style="width:100px">
     <col>
     <col style="width:46px">
-    <col style="width:110px">
-    <col style="width:110px">
+    ${hasWeekly?'<col style="width:120px">':''}
+    ${hasMonthly?'<col style="width:120px">':''}
   </colgroup>
   <thead><tr>
     <th class="sth" style="text-align:right;width:34px">No.</th>
@@ -4781,8 +4888,8 @@ function rBidOverview(){
     <th class="sth">ITEM #</th>
     <th class="sth">DESCRIPTION</th>
     <th class="sth" style="text-align:center">UM</th>
-    <th class="sth" style="background:#1d6a4a;text-align:right">WEEKLY BID<br><span style="font-size:9px;font-weight:400;opacity:.85">${wkLabel}</span></th>
-    <th class="sth" style="background:#2c6e49;text-align:right">MONTHLY BID<br><span style="font-size:9px;font-weight:400;opacity:.85">${mthLabel}</span></th>
+    ${hasWeekly?`<th class="sth" style="background:#1d6a4a;text-align:right">WEEKLY BID<br><span style="font-size:9px;font-weight:400;opacity:.85">${wkLabel}</span></th>`:''}
+    ${hasMonthly?`<th class="sth" style="background:#2c6e49;text-align:right">MONTHLY BID<br><span style="font-size:9px;font-weight:400;opacity:.85">${mthLabel}</span></th>`:''}
   </tr></thead>
   <tbody>${rows}</tbody>
 </table></div>
