@@ -758,10 +758,14 @@ function render(){
   _footerPg=null; // Reset pagination for footer
   const el=document.getElementById('main-content');
   if(!el)return;
-  // Save scroll positions before destroying DOM
-  const mainScrollY=el.scrollTop;
+  // Compute location key — if it changes, reset scroll; if same, preserve scroll
+  const locKey=[S.view,S.bTab||'',S.uTab||'',S.casino?S.casino.id:'',S.cat||'',S.ovCasino?S.ovCasino.id:'',S.anCasino||'',S.anPeriod||'',S.anDrillCid||'',S.anDrillSegment||'',S.anItemDrillHkm||''].join('|');
+  const locChanged=locKey!==window._lastLocKey;
+  window._lastLocKey=locKey;
+  // Save scroll positions before destroying DOM (only preserve when staying on same location)
+  const mainScrollY=locChanged?0:el.scrollTop;
   const twh=el.querySelector('.twh');
-  const twhScrollX=twh?twh.scrollLeft:0;
+  const twhScrollX=(locChanged||!twh)?0:twh.scrollLeft;
   const fn={dashboard:rDash,casino:rCasino,bids:rBids,upload:rUpload,bidoverview:rBidOverview,analytics:rAnalytics,analyticsDetail:rAnalyticsDetail,itemPurchaseDetail:rItemPurchaseDetail,purchaseHistory:rPurchaseHistory};
   el.innerHTML=(fn[S.view]||rDash)();
   // Render footer
