@@ -715,9 +715,34 @@ const vH=(v,r)=>{
   if(v==null)return'<span class="nc">—</span>';
   return`<span class="vb ${r>50?'vh':r>10?'vm':'vl'}">${v}</span>`;
 };
+// Determine color style for LP date based on age (matches Google Sheet conditional formatting)
+const lpAgeStyle=d=>{
+  if(!d)return null;
+  const m=String(d).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if(!m)return null;
+  const yr=parseInt(m[3]);const fullYr=yr<50?2000+yr:yr<100?1900+yr:yr;
+  const lp=new Date(fullYr,parseInt(m[1])-1,parseInt(m[2]));
+  const today=new Date();today.setHours(0,0,0,0);lp.setHours(0,0,0,0);
+  const days=Math.round((today-lp)/86400000);
+  if(days<1)return{bg:'#1d9e75',color:'#fff',days};         // today/future — dark green
+  if(days<=14)return{bg:'#1d9e75',color:'#fff',days};       // 1-14 days — dark green
+  if(days<=30)return{bg:'#b5dda0',color:'#0f6344',days};    // 15-30 days — light green
+  if(days<=45)return{bg:'#f5b041',color:'#6e2c00',days};    // 31-45 days — orange
+  return{bg:'#e74c3c',color:'#fff',days};                   // 46+ days — red
+};
 const ldH=d=>{
   if(!d)return'<span class="nc">—</span>';
-  return`<span class="${d.includes('24')?'lo':'ld'}">${d}</span>`;
+  const s=lpAgeStyle(d);
+  if(!s)return`<span class="ld">${d}</span>`;
+  return`<span style="background:${s.bg};color:${s.color};padding:1px 6px;border-radius:4px;font-weight:700;display:inline-block;font-size:10.5px" title="${s.days} day${s.days!==1?'s':''} ago">${d}</span>`;
+};
+// Format LP Price cell with same age-based color
+const lpH=(price,lpDate)=>{
+  if(price==null)return'<span class="nc">—</span>';
+  const s=lpAgeStyle(lpDate);
+  const txt='$'+f(price);
+  if(!s)return txt;
+  return`<span style="background:${s.bg};color:${s.color};padding:1px 6px;border-radius:4px;font-weight:700;display:inline-block;font-size:10.5px" title="${s.days} day${s.days!==1?'s':''} ago">${txt}</span>`;
 };
 const gI=(cid,cat)=>DB.items[`${cid}|${cat}`]||[];
 const gL=(cid,item,hkm)=>{if(hkm&&hkm.trim()){const v=DB.lps[`${cid}|${hkm.trim()}`];if(v&&Object.keys(v).length)return v;}return DB.lps[`${cid}|${item}`]||{};};
@@ -1339,6 +1364,7 @@ ${DB._isAdmin?`<div style="display:flex;gap:8px;margin-bottom:0;flex-wrap:wrap;a
   <button class="btn-act" onclick="runAutoPrice()">AUTOMATE BID</button>
   <button class="btn-act" onclick="openPasteModal()">PASTE BID PRICES</button>
   <button class="btn-act btn-act-gold" onclick="copyDraftBid()">COPY BID PRICES</button>
+  <button class="btn-act" style="color:#0f6344;border-color:#b5dda0" onclick="copyLpData()" title="Copy LP Date, LP Price, Vol 365D/90D/30D/7D, 365D Rev for paste into Google Sheet">COPY LP DATA</button>
   <button class="btn-act" style="color:#c0392b;border-color:#e8a8a0" onclick="clearDraftBid()">CLEAR BID</button>
   <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
     <span style="font-size:11px;font-weight:800;color:var(--navy);white-space:nowrap;letter-spacing:.3px">EFFECTIVE THROUGH:</span>
@@ -1402,7 +1428,7 @@ ${(()=>{
     <td class="s3" style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${it.desc}">${it.desc}</td>
     <td style="font-size:11px;color:var(--tx2)">${it.unit}</td>
     <td>${ldH(lps.lpDate)}</td>
-    <td class="pr">${lps.lpPrice!=null?'$'+f(lps.lpPrice):'<span class="nc">—</span>'}</td>
+    <td class="pr">${lpH(lps.lpPrice,lps.lpDate)}</td>
     <td class="nr">${vH(lps.v365,ref)}</td>
     <td class="nr">${vH(lps.v90,ref)}</td>
     <td class="nr">${vH(lps.v30,ref)}</td>
@@ -2431,6 +2457,29 @@ function copyDraftBid(){
   });
 }
 
+// Copy LP Date through 365D Rev columns as tab-separated values for Google Sheet paste
+function copyLpData(){
+  const its=gI(S.casino.id,S.cat);
+  const lines=its.map(it=>{
+    const lps=gL(S.casino.id,it.item,it.hkm);
+    const lpDate=lps.lpDate||'';
+    const lpPrice=lps.lpPrice!=null?parseFloat(lps.lpPrice).toFixed(2):'';
+    const v365=lps.v365!=null?lps.v365:'';
+    const v90=lps.v90!=null?lps.v90:'';
+    const v30=lps.v30!=null?lps.v30:'';
+    const v7=lps.v7!=null?lps.v7:'';
+    const rev365=lps.rev365!=null?lps.rev365:'';
+    return [lpDate,lpPrice,v365,v90,v30,v7,rev365].join('\t');
+  });
+  const tsv=lines.join('\n');
+  navigator.clipboard.writeText(tsv).then(()=>{
+    sal('bal',`LP data copied (${its.length} rows). Paste into your Google Sheet LP Date column — 7 columns will fill automatically.`,'ok');
+    toast(`${its.length} rows copied: LP Date, LP Price, Vol 365D/90D/30D/7D, 365D Rev.<br>Paste directly into your Google Sheet.`,'ok','LP Data Copied',5000);
+  }).catch(()=>{
+    sal('bal','Copy failed — try again or use Ctrl+C.','er');
+  });
+}
+
 
 // ══════════════════════════════════════════════════════════════════
 //  SOP PRICING ENGINE v5.1
@@ -3253,8 +3302,8 @@ function onFltQ(el,key){
 function rFltBar(scope,rightSlot=''){
   const flt=S.flt||{};
   return`<div class="fbar" style="margin-bottom:0">
-    <span class="ftag${flt.hkmOnly?' on':''}" onclick="S.flt.hkmOnly=!S.flt.hkmOnly;S.pg={};render()">&#9670; HKM Only</span>
-    <span class="ftag${flt.pricedOnly?' on':''}" onclick="S.flt.pricedOnly=!S.flt.pricedOnly;S.pg={};render()">&#9670; Priced Only</span>
+    <span class="ftag${flt.hkmOnly?' on':''}" onclick="S.flt.hkmOnly=!S.flt.hkmOnly;S.pg={};render()">HKM Only</span>
+    <span class="ftag${flt.pricedOnly?' on':''}" onclick="S.flt.pricedOnly=!S.flt.pricedOnly;S.pg={};render()">Priced Only</span>
     <input class="fsearch" data-fk="q" placeholder="Search HKM / Item# / Desc…" value="${flt.q||''}" oninput="onFltQ(this,'q')">
     ${(flt.hkmOnly||flt.pricedOnly||flt.q)?'<span class="ftag" onclick="S.flt={};S.pg={};render()" style="color:var(--red);border-color:#f7c1c1">✕ Clear</span>':''}
     ${rightSlot?`<div style="margin-left:auto">${rightSlot}</div>`:''}
