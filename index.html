@@ -2678,6 +2678,12 @@ function calcSignal(lps, lastBid) {
   return sig;
 }
 
+// Detect produce category (for QB Price Rule: match QB exactly vs +1 step)
+function isProduceCat(cat) {
+  const c = String(cat||'').toUpperCase();
+  return c.includes('PRODUCE') || c.includes('184') || c.includes('VEG') || c.includes('FRUIT');
+}
+
 // Main auto-price function — fills DB.newB for all items in current category
 // Follows SOP v5.1: Cost Delta → Activity Gate → QB Check → Demand Signal → Decrease Gate → Step → Margin Floor
 function runAutoPrice() {
@@ -2685,13 +2691,15 @@ function runAutoPrice() {
   const its = gI(S.casino.id, S.cat);
   const pa  = DB.periods[S.cA] || DB.periods[0];  // Period A = current cost
   const pb  = DB.periods[S.cB] || DB.periods[1];  // Period B = previous cost
-  let applied=0, holds=0, increases=0, decreases=0, costDeltaHits=0, marginFloorHits=0;
+  const produce = isProduceCat(S.cat);
+  let applied=0, holds=0, increases=0, decreases=0, costDeltaHits=0, marginFloorHits=0, qbHits=0, uomMismatches=0;
 
   its.forEach(it => {
     const lps = gL(S.casino.id, it.item, it.hkm);
     // Look up cost by HKM code (period data keyed by HKM), fall back to item code
     const _key = it.hkm && it.hkm.trim() ? it.hkm.trim() : it.item;
     const acCost = (pa.data[_key]?.cost) || (pa.data[it.item]?.cost) || null;
+    const acReg  = (pa.data[_key]?.reg)  || (pa.data[it.item]?.reg)  || null;  // QB price
     const bcCost = pb ? ((pb.data[_key]?.cost) || (pb.data[it.item]?.cost) || null) : null;
 
     // Last bid: use getLastBid() which checks savedBids → bidH → impBH
@@ -2724,30 +2732,96 @@ function runAutoPrice() {
           action = 'HOLD'; note = 'Inactive'; holds++;
         }
       } else {
-        // ── STEP 3: Demand Signal (Phases A–D) ──
-        const sig = demandSignal(lps);
-        action = sig.action; note = sig.note;
+        // ── STEP 3: QB Price Check (SOP v5.1 Section 3.6) — active items only ──
+        // UOM Mismatch Guard: if bid/QB > 5x, different unit of measure, skip QB rules
+        const uomMismatch = acReg && (lb / acReg > 5 || acReg / lb > 5);
+        if (uomMismatch) uomMismatches++;
 
-        // ── STEP 4: Decrease Gate — DECREASE only if v30 > 0 ──
-        if (action === 'DECREASE' && (lps.v30 || 0) === 0) {
-          action = 'HOLD'; note = 'Decrease gate (v30=0)';
+        const baseline = phaseA(lps.v365 || 0);
+        const isHealthyOrMod = (baseline === 'STRONG' || baseline === 'MODERATE');
+        const daysLp = daysSince(lps.lpDate);
+        const withinFourteen = daysLp < 14;
+        const step = sopStep(lb);
+
+        let qbDetermined = false;
+
+        if (acReg && !uomMismatch) {
+          if (isHealthyOrMod) {
+            // Healthy/Moderate QB rules
+            if (lb > acReg && withinFourteen) {
+              // Bid > QB + purchased within 14 days → HOLD (client accepts price)
+              action = 'HOLD'; note = 'QB: Bid>QB, active (14d)'; qbDetermined = true;
+            } else if (lb < acReg) {
+              // Bid < QB → INCREASE
+              if (produce) {
+                // Produce: match QB exactly
+                newPrice = Math.round(acReg * 100) / 100;
+                action = 'INCREASE'; note = 'QB: Match (Produce)'; qbDetermined = true; qbHits++; increases++;
+              } else {
+                // Dry/Grocery/Meat/Seafood: +1 discrete step (not above QB)
+                newPrice = Math.min(Math.round((lb + step) * 100) / 100, acReg);
+                action = 'INCREASE'; note = 'QB: +1 step (Dry)'; qbDetermined = true; qbHits++; increases++;
+              }
+            }
+          } else {
+            // Unknown/Weak QB rules (active items: v90 > 0)
+            if (lb > acReg && withinFourteen) {
+              action = 'HOLD'; note = 'QB: Bid>QB, active (14d)'; qbDetermined = true;
+            } else if (lb > acReg && !withinFourteen) {
+              // Bid > QB + NOT purchased in 14 days → DECREASE -1 step (floor at QB)
+              if ((lps.v30 || 0) === 0) {
+                // Decrease Gate blocks this
+                action = 'HOLD'; note = 'QB: Dec gate (v30=0)'; qbDetermined = true;
+              } else {
+                newPrice = Math.max(Math.round((lb - step) * 100) / 100, acReg);
+                // Margin floor check
+                if (acCost && newPrice < acCost / (1 - SOP.marginFloor)) {
+                  newPrice = lb; action = 'HOLD'; note = 'QB: Margin floor stop'; marginFloorHits++; qbDetermined = true;
+                } else {
+                  action = 'DECREASE'; note = 'QB: -1 step (inactive 14d)'; qbDetermined = true; qbHits++; decreases++;
+                }
+              }
+            } else if (lb < acReg) {
+              // Bid < QB AND delta = 0 → HOLD (gap may be intentional)
+              action = 'HOLD'; note = 'QB: Bid<QB, delta=0'; qbDetermined = true;
+            }
+          }
         }
 
-        const step = sopStep(lb);
-        if (action === 'INCREASE') {
-          newPrice = Math.round((lb + step) * 100) / 100;
-          // Snap up to margin floor if needed
-          if (acCost) newPrice = Math.max(newPrice, Math.ceil((acCost / (1 - SOP.marginFloor)) / step) * step);
-          increases++;
-        } else if (action === 'DECREASE') {
-          newPrice = Math.round((lb - step) * 100) / 100;
-          if (newPrice < 0.01) newPrice = 0.01;
-          // ── STEP 5: Margin Floor — block decrease if it breaches 10% ──
-          if (acCost && newPrice < acCost / (1 - SOP.marginFloor)) {
-            newPrice = lb; action = 'HOLD'; note = 'Margin floor stop'; marginFloorHits++;
-            holds++;
-          } else decreases++;
-        } else holds++;
+        // ── STEP 4: Demand Signal (if QB didn't determine action) ──
+        if (!qbDetermined) {
+          const sig = demandSignal(lps);
+          action = sig.action; note = sig.note;
+
+          // ── STEP 5: Decrease Gate — DECREASE only if v30 > 0 ──
+          if (action === 'DECREASE' && (lps.v30 || 0) === 0) {
+            action = 'HOLD'; note = 'Decrease gate (v30=0)';
+          }
+
+          if (action === 'INCREASE') {
+            newPrice = Math.round((lb + step) * 100) / 100;
+            // Snap up to margin floor if needed
+            if (acCost) newPrice = Math.max(newPrice, Math.ceil((acCost / (1 - SOP.marginFloor)) / step) * step);
+            increases++;
+          } else if (action === 'DECREASE') {
+            newPrice = Math.round((lb - step) * 100) / 100;
+            if (newPrice < 0.01) newPrice = 0.01;
+            // ── STEP 7: Margin Floor — block decrease if it breaches 10% ──
+            if (acCost && newPrice < acCost / (1 - SOP.marginFloor)) {
+              newPrice = lb; action = 'HOLD'; note = 'Margin floor stop'; marginFloorHits++;
+              holds++;
+            } else decreases++;
+          } else holds++;
+        } else if (action === 'HOLD') {
+          holds++;
+        }
+
+        if (uomMismatch && action !== 'HOLD') {
+          // UOM Mismatch: force HOLD regardless
+          newPrice = lb; action = 'HOLD'; note = 'UOM mismatch (skip QB)';
+          // adjust counters
+          if (qbDetermined) { qbHits--; }
+        }
       }
     }
 
@@ -2757,10 +2831,12 @@ function runAutoPrice() {
 
   dbSave();
   const parts = [`${applied} items priced`, `${increases} INCREASE`, `${decreases} DECREASE`, `${holds} HOLD`];
-  if (costDeltaHits)    parts.push(`${costDeltaHits} cost delta applied`);
-  if (marginFloorHits)  parts.push(`${marginFloorHits} margin floor overrides`);
+  if (costDeltaHits)    parts.push(`${costDeltaHits} cost delta`);
+  if (qbHits)           parts.push(`${qbHits} QB rule`);
+  if (marginFloorHits)  parts.push(`${marginFloorHits} margin floor`);
+  if (uomMismatches)    parts.push(`${uomMismatches} UOM mismatch`);
   sal('draft-al', `✓ Auto-Price (SOP v5.1): ${parts.join(' · ')}`, 'ok', 10000);
-  toast(`${applied} items auto-priced — ${increases} increase · ${decreases} decrease · ${holds} hold.<br>Review margins below before submitting.`,'ok','Auto-Price Complete',6000);
+  toast(`${applied} items auto-priced — ${increases} increase · ${decreases} decrease · ${holds} hold.<br>${qbHits?qbHits+' QB rule · ':''}${costDeltaHits?costDeltaHits+' cost delta · ':''}${marginFloorHits?marginFloorHits+' margin floor · ':''}Review margins below before submitting.`,'ok','Auto-Price Complete',7000);
   render();
 }
 
