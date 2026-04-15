@@ -5692,16 +5692,22 @@ function _doLoginWithUsers(email, pw, users){
       users.push(entry);
       saveUsers(users);
       localStorage.setItem('hkm_auth',JSON.stringify({email,pw:btoa(pw),name:'Krissa'}));
+      DB._currentUser={email,name:'Krissa'};DB._isAdmin=true;
       hideLogin();return;
     }
     if(user.pw!==btoa(pw)){document.getElementById('login-al').textContent='Incorrect password.';return;}
-    localStorage.setItem('hkm_auth',JSON.stringify({email,pw:btoa(pw),name:user.name||'Krissa'}));
+    const adminName=user.name||'Krissa';
+    localStorage.setItem('hkm_auth',JSON.stringify({email,pw:btoa(pw),name:adminName}));
+    DB._currentUser={email,name:adminName};DB._isAdmin=true;
     hideLogin();return;
   }
   if(!user){document.getElementById('login-al').textContent='Account not found. Request access below.';return;}
   if(!user.approved){document.getElementById('login-al').textContent='Your account is pending admin approval.';return;}
   if(user.pw!==btoa(pw)){document.getElementById('login-al').textContent='Incorrect password.';return;}
-  localStorage.setItem('hkm_auth',JSON.stringify({email,pw:btoa(pw),name:user.name||email}));
+  const memberName=user.name||email;
+  localStorage.setItem('hkm_auth',JSON.stringify({email,pw:btoa(pw),name:memberName}));
+  DB._currentUser={email,name:memberName};
+  DB._isAdmin=(user.role==='admin');
   hideLogin();
 }
 async function doLogin(){
