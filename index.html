@@ -760,32 +760,47 @@ const lpH=(price,lpDate)=>{
 const gI=(cid,cat)=>DB.items[`${cid}|${cat}`]||[];
 const gL=(cid,item,hkm)=>{if(hkm&&hkm.trim()){const v=DB.lps[`${cid}|${hkm.trim()}`];if(v&&Object.keys(v).length)return v;}return DB.lps[`${cid}|${item}`]||{};};
 // Build HKM code → best description map for a given casino.
-// Priority: (1) current casino items with desc, (2) any items with desc, (3) Master PL periods, (4) any match.
+// Priority (authoritative = HKM's own records first):
+//   1. DB.lps for this casino (HKM code → aggregated desc from QBE rows for this casino)
+//   2. DB.qbeRows for this casino (per-row desc from raw QBE file — fallback if DB.lps.desc missing)
+//   3. Any casino's DB.lps desc (cross-casino HKM's own records)
+//   4. Master Price List periods (PL.CSV descriptions)
+//   5. DB.items description (last resort)
 function _buildHkmDescMap(cid){
   const map={};
-  const priority={}; // track which priority level each hkm got
-  // Pass 1 & 2: items table
-  Object.entries(DB.items||{}).forEach(([k,arr])=>{
-    const isCurrent=k.startsWith(cid+'|');
-    (arr||[]).forEach(it=>{
-      const h=(it.hkm||'').trim();if(!h)return;
-      const d=(it.desc||'').trim();
-      const tier=d?(isCurrent?1:2):4;
-      if(!(h in priority)||tier<priority[h]){priority[h]=tier;if(d||!(h in map))map[h]=d;}
-    });
+  const priority={}; // lower number = higher priority
+  const set=(h,d,tier)=>{
+    if(!h||!d)return;
+    if(!(h in priority)||tier<priority[h]){priority[h]=tier;map[h]=d;}
+  };
+  // Pass 1: DB.lps for current casino (QBE aggregated description)
+  Object.entries(DB.lps||{}).forEach(([k,v])=>{
+    if(!k.startsWith(cid+'|'))return;
+    const h=k.split('|')[1];
+    set(h,(v&&v.desc||'').trim(),1);
   });
-  // Pass 3: price list periods (Master PL) — fallback for HKM codes not in items or items w/o desc
+  // Pass 2: DB.qbeRows for current casino (per-row desc from raw QBE)
+  Object.entries(DB.qbeRows||{}).forEach(([k,rows])=>{
+    if(!k.startsWith(cid+'|'))return;
+    const h=k.split('|')[1];
+    // Pick the longest non-empty desc from the rows
+    let best='';
+    (rows||[]).forEach(r=>{const d=(r.desc||'').trim();if(d.length>best.length)best=d;});
+    set(h,best,2);
+  });
+  // Pass 3: any casino's DB.lps desc (cross-casino fallback)
+  Object.entries(DB.lps||{}).forEach(([k,v])=>{
+    const h=k.split('|')[1];
+    set(h,(v&&v.desc||'').trim(),3);
+  });
+  // Pass 4: Master Price List periods
   (DB.periods||[]).forEach(p=>{
     if(!p||!p.data)return;
-    Object.entries(p.data).forEach(([h,v])=>{
-      if(!h)return;
-      const d=(v&&v.desc||'').trim();
-      if(!d)return;
-      // Only fill if current priority is weaker than 3 (i.e. no desc from items)
-      if(!(h in priority)||priority[h]>=3){
-        if(!map[h]){map[h]=d;priority[h]=3;}
-      }
-    });
+    Object.entries(p.data).forEach(([h,v])=>set(h,(v&&v.desc||'').trim(),4));
+  });
+  // Pass 5: DB.items as last resort
+  Object.entries(DB.items||{}).forEach(([k,arr])=>{
+    (arr||[]).forEach(it=>set((it.hkm||'').trim(),(it.desc||'').trim(),5));
   });
   return map;
 }
@@ -1936,9 +1951,15 @@ function hQBE(inp){
         const colQty=fndHdr('qty','quantity','qtyordered','qtyshipped')||null;
         const parsed=res.data.map(r=>{
           const rawItem=String(r[colItem]||r['Item']||r['item']||r['ITEM']||'').trim();
-          // QB exports items as "GWCSH2:Wine Shao Xing..." — split on whitespace, comma, or colon
-          // then take the first segment as the HKM code
+          // QB exports items as "GWCSH2:Wine Shao Xing 12/750 ML/CS" — the portion BEFORE the
+          // first separator (colon, whitespace, or comma) is the HKM code; the portion AFTER
+          // is HKM's own product description (stored per-transaction for Purchase History)
           const code=rawItem.split(/[\s,:]+/)[0].trim();
+          // Extract description: everything after the HKM code and its separator
+          let itemDesc='';
+          if(code&&rawItem.length>code.length){
+            itemDesc=rawItem.substring(code.length).replace(/^[\s,:]+/,'').trim();
+          }
           const rawDate=r[colDate]||r['Date']||r['date']||'';
           let dt;
           if(typeof rawDate==='number'&&rawDate>1000&&rawDate<100000){
@@ -1960,7 +1981,7 @@ function hQBE(inp){
           const amount=parseFloat(r[colAmount]||r['Amount']||0)||0;
           const fob=colFob?String(r[colFob]||'').trim():'';
           const qty=colQty?parseFloat(r[colQty]||0)||0:null;
-          return{code,dt,valid:!isNaN(dt.getTime())&&code&&code.length>2,
+          return{code,desc:itemDesc,dt,valid:!isNaN(dt.getTime())&&code&&code.length>2,
             num:parseFloat(r[colNum]||r['Num']||0)||0,price,amount,fob,qty};
         }).filter(r=>r.valid);
         // Normalize FOB names — QB truncates names and encoders may typo (e.g. "ASHING POTATO"="WASHING POTAT", "\IN ROOM DINI"="IN ROOM DINI")
@@ -2009,11 +2030,19 @@ function hQBE(inp){
         let n=0;
         Object.entries(grp).forEach(([code,rows])=>{
           const latest=rows.sort((a,b)=>b.dt-a.dt||b.num-a.num)[0];
+          // Pick the longest non-empty description across all rows for this code
+          // (different rows may have slight variations — longest is usually the most complete)
+          let bestDesc='';
+          for(const r of rows){
+            const d=(r.desc||'').trim();
+            if(d.length>bestDesc.length)bestDesc=d;
+          }
           // Store keyed by HKM code (QB exports HKM codes, not Item #s)
           // gL() in the render layer looks up by HKM code first, so this matches correctly
           DB.lps[`${cid}|${code}`]={
             lpDate:latest.dt.toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'2-digit'}),
             lpPrice:latest.price,
+            desc:bestDesc,
             v365:rows.filter(r=>r.dt>=d365).length,
             v90:rows.filter(r=>r.dt>=d90).length,
             v30:rows.filter(r=>r.dt>=d30).length,
@@ -2021,13 +2050,15 @@ function hQBE(inp){
             rev365:Math.round(rows.filter(r=>r.dt>=d365).reduce((s,r)=>s+r.amount,0)*100)/100,
           };
           // Store raw purchase rows for drill-down (date as ISO string for JSON serialization)
+          // Each row keeps its own desc so we can always trace back to the original QBE line
           DB.qbeRows[`${cid}|${code}`]=rows.map(r=>({
             dt:r.dt.toISOString(),
             fob:r.fob,
             price:r.price,
             amount:r.amount,
             num:r.num,
-            qty:r.qty
+            qty:r.qty,
+            desc:r.desc||''
           }));
           n++;
         });
