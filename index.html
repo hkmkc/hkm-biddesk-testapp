@@ -759,6 +759,36 @@ const lpH=(price,lpDate)=>{
 };
 const gI=(cid,cat)=>DB.items[`${cid}|${cat}`]||[];
 const gL=(cid,item,hkm)=>{if(hkm&&hkm.trim()){const v=DB.lps[`${cid}|${hkm.trim()}`];if(v&&Object.keys(v).length)return v;}return DB.lps[`${cid}|${item}`]||{};};
+// Build HKM code → best description map for a given casino.
+// Priority: (1) current casino items with desc, (2) any items with desc, (3) Master PL periods, (4) any match.
+function _buildHkmDescMap(cid){
+  const map={};
+  const priority={}; // track which priority level each hkm got
+  // Pass 1 & 2: items table
+  Object.entries(DB.items||{}).forEach(([k,arr])=>{
+    const isCurrent=k.startsWith(cid+'|');
+    (arr||[]).forEach(it=>{
+      const h=(it.hkm||'').trim();if(!h)return;
+      const d=(it.desc||'').trim();
+      const tier=d?(isCurrent?1:2):4;
+      if(!(h in priority)||tier<priority[h]){priority[h]=tier;if(d||!(h in map))map[h]=d;}
+    });
+  });
+  // Pass 3: price list periods (Master PL) — fallback for HKM codes not in items or items w/o desc
+  (DB.periods||[]).forEach(p=>{
+    if(!p||!p.data)return;
+    Object.entries(p.data).forEach(([h,v])=>{
+      if(!h)return;
+      const d=(v&&v.desc||'').trim();
+      if(!d)return;
+      // Only fill if current priority is weaker than 3 (i.e. no desc from items)
+      if(!(h in priority)||priority[h]>=3){
+        if(!map[h]){map[h]=d;priority[h]=3;}
+      }
+    });
+  });
+  return map;
+}
 // Parse period.dt ("MM/DD/YY" or "MM.DD.YY") into sortable timestamp; newest first
 const _pdTs=p=>{
   if(!p||!p.dt)return 0;
@@ -4347,25 +4377,16 @@ function rPurchaseHistory(){
   const qr=DB.qbeRows||{};
   // Gather ALL raw rows for this casino across all item codes
   const allRows=[];
-  // Build an HKM → description map, prioritizing: (1) current casino w/ desc, (2) any w/ desc, (3) any match
-  const hkmDescMap={};
-  Object.entries(DB.items||{}).forEach(([k,arr])=>{
-    const isCurrentCasino=k.startsWith(cid+'|');
-    (arr||[]).forEach(it=>{
-      const h=(it.hkm||'').trim();
-      if(!h)return;
-      const d=(it.desc||'').trim();
-      const existing=hkmDescMap[h];
-      // Priority: current casino with desc > any with desc > any match
-      if(!existing || (isCurrentCasino && d && !existing.fromCasino) || (d && !existing.desc)){
-        hkmDescMap[h]={desc:d,fromCasino:isCurrentCasino};
-      }
-    });
-  });
+  // Build HKM → description map with priority:
+  //  1. Current casino items with non-empty desc
+  //  2. Any casino items with non-empty desc
+  //  3. Price List periods (Master PL) — fallback for codes missing from items
+  //  4. Any items (even empty desc) as last resort
+  const hkmDescMap=_buildHkmDescMap(cid);
   Object.entries(qr).forEach(([key,rows])=>{
     if(!key.startsWith(cid+'|'))return;
     const hkm=key.split('|')[1];
-    const desc=(hkmDescMap[hkm]&&hkmDescMap[hkm].desc)||'';
+    const desc=hkmDescMap[hkm]||'';
     rows.forEach(r=>allRows.push({hkm,desc,dt:new Date(r.dt),fob:r.fob&&r.fob.trim()?r.fob.trim():'No FOB',price:r.price,amount:r.amount,qty:r.qty,num:r.num}));
   });
   // Apply filters
@@ -4521,24 +4542,11 @@ function exportPurchaseHistory(fmt='csv'){
   const casino=DB.casinos.find(c=>c.id===cid);
   const qr=DB.qbeRows||{};
   const allRows=[];
-  // Build HKM → description map, prioritizing current casino + non-empty descriptions
-  const hkmDescMap={};
-  Object.entries(DB.items||{}).forEach(([k,arr])=>{
-    const isCurrentCasino=k.startsWith(cid+'|');
-    (arr||[]).forEach(it=>{
-      const h=(it.hkm||'').trim();
-      if(!h)return;
-      const d=(it.desc||'').trim();
-      const existing=hkmDescMap[h];
-      if(!existing || (isCurrentCasino && d && !existing.fromCasino) || (d && !existing.desc)){
-        hkmDescMap[h]={desc:d,fromCasino:isCurrentCasino};
-      }
-    });
-  });
+  const hkmDescMap=_buildHkmDescMap(cid);
   Object.entries(qr).forEach(([key,rows])=>{
     if(!key.startsWith(cid+'|'))return;
     const hkm=key.split('|')[1];
-    const desc=(hkmDescMap[hkm]&&hkmDescMap[hkm].desc)||'';
+    const desc=hkmDescMap[hkm]||'';
     rows.forEach(r=>allRows.push({hkm,desc,dt:new Date(r.dt),fob:r.fob||'',price:r.price,amount:r.amount,qty:r.qty,num:r.num}));
   });
   const fobFilter=S._phFobFilter||'';
