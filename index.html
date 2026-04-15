@@ -83,8 +83,9 @@ body.sb-collapsed #sb-collapse-btn svg{transform:rotate(180deg)}
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fff}
 #main-content{flex:1;padding:22px;overflow-y:auto;overflow-x:hidden}
 #app-footer{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:6px 22px;border-top:1.5px solid var(--bd);background:var(--bg2);font-size:11px;color:var(--tx2);gap:12px;flex-wrap:nowrap;height:40px;overflow:hidden}
-#app-footer .pgbar-l{display:flex;align-items:center;gap:6px;white-space:nowrap}
-#app-footer .pgbar-r{display:flex;align-items:center;gap:3px;white-space:nowrap}
+#app-footer .pgbar-l,.ph-modal-pg .pgbar-l{display:flex;align-items:center;gap:6px;white-space:nowrap}
+#app-footer .pgbar-r,.ph-modal-pg .pgbar-r{display:flex;align-items:center;gap:3px;white-space:nowrap}
+.ph-modal-pg .pgbar-l span,.ph-modal-pg .pgbar-r{white-space:nowrap}
 #app-footer .app-brand{font-size:10px;color:var(--tx3);white-space:nowrap;margin-left:auto}
 .btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:var(--r);border:1px solid var(--bd2);cursor:pointer;font-size:12px;font-weight:700;background:var(--bg2);color:var(--tx);transition:.15s;white-space:nowrap;font-family:inherit}
 .btn:hover{background:var(--bg3)}
@@ -1385,10 +1386,10 @@ ${DB._isAdmin?`<div style="display:flex;gap:8px;margin-bottom:0;flex-wrap:wrap;a
   <button class="btn-act" style="color:#c0392b;border-color:#e8a8a0" onclick="clearDraftBid()">CLEAR BID</button>
   <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
     <span style="font-size:11px;font-weight:800;color:var(--navy);white-space:nowrap;letter-spacing:.3px">EFFECTIVE THROUGH:</span>
-    <input type="date" id="eff-from" value="${S._effFrom||''}" onchange="S._effFrom=this.value" style="padding:4px 8px;border-radius:6px;border:1.5px solid var(--navy);font-size:11px;font-family:inherit;color:var(--navy);background:var(--bg)">
+    <input type="date" id="eff-from" value="${S._effFrom||''}" onchange="S._effFrom=this.value" style="padding:4px 8px;border-radius:6px;border:1.5px solid #93c5fd;font-size:11px;font-family:inherit;color:var(--navy);background:var(--bg)">
     <span style="color:var(--tx2);font-weight:700">–</span>
-    <input type="date" id="eff-to" value="${S._effTo||''}" onchange="S._effTo=this.value" style="padding:4px 8px;border-radius:6px;border:1.5px solid var(--navy);font-size:11px;font-family:inherit;color:var(--navy);background:var(--bg)">
-    <button class="btn btn-sm" style="font-weight:700;padding:6px 14px;border:1.5px solid var(--navy);color:var(--navy)" onclick="saveDraft()">SAVE DRAFT</button>
+    <input type="date" id="eff-to" value="${S._effTo||''}" onchange="S._effTo=this.value" style="padding:4px 8px;border-radius:6px;border:1.5px solid #93c5fd;font-size:11px;font-family:inherit;color:var(--navy);background:var(--bg)">
+    <button class="btn-act" onclick="saveDraft()">SAVE DRAFT</button>
     <button class="btn btn-gd btn-sm" style="font-weight:800;letter-spacing:.5px;padding:6px 16px" onclick="saveBid()">SUBMIT BID</button>
   </div>
 </div>`:`<div style="display:flex;align-items:center;gap:8px;margin-bottom:0">
@@ -3379,15 +3380,15 @@ function _rPgControls(pgd,key){
     }
   }
   return`
-    <div class="pgbar-l">
-      <span>Rows per page:</span>
+    <div class="pgbar-l" style="white-space:nowrap">
+      <span style="white-space:nowrap">Rows per page:</span>
       <select class="pgsz" title="Rows per page" onchange="S.pgSz=parseInt(this.value);S.pg={};render()">
         ${[10,20,30,50,75,100].map(n=>`<option value="${n}"${(pgSz||10)===n?' selected':''}>${n}</option>`).join('')}
       </select>
-      <span style="margin-left:8px;color:var(--tx3)">Showing ${start}\u2013${end} of ${total}</span>
-      <span style="color:var(--tx3)">\u00b7 Page ${page+1} of ${pages}</span>
+      <span style="margin-left:8px;color:var(--tx3);white-space:nowrap">Showing ${start}\u2013${end} of ${total}</span>
+      <span style="color:var(--tx3);white-space:nowrap">\u00b7 Page ${page+1} of ${pages}</span>
     </div>
-    <div class="pgbar-r">
+    <div class="pgbar-r" style="white-space:nowrap">
       <button class="pgbtn" onclick="S.pg['${key}']=${Math.max(0,page-1)};render()" ${page===0?'disabled':''}>\u2039</button>
       ${btns}
       <button class="pgbtn" onclick="S.pg['${key}']=${Math.min(pages-1,page+1)};render()" ${page>=pages-1?'disabled':''}>\u203a</button>
@@ -3446,7 +3447,7 @@ function rFltBar(scope,rightSlot=''){
   </div>`;
 }
 function _rPHBtn(){
-  return`<button class="btn-act" onclick="openPHModal()" style="color:var(--navy);border-color:var(--navy);font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>PURCHASE HISTORY</button>`;
+  return`<button class="btn-act" onclick="openPHModal()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>PURCHASE HISTORY</button>`;
 }
 function openPHModal(){
   if(!S.casino)return;
@@ -4221,7 +4222,7 @@ function rItemPurchaseDetail(){
     const priceStr=p.price!=null?'$'+parseFloat(p.price).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
     const amtStr=p.amount?'$'+parseFloat(p.amount).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
     const numStr=p.num?String(p.num):'—';
-    const qtyStr=p.qty!=null?p.qty:'—';
+    const qtyStr=p.qty!=null?(Math.round(p.qty*100)/100).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2}):'—';
     return`<tr>
       <td style="color:var(--tx3);font-size:11px">${_ipdOffset+i+1}</td>
       <td style="font-size:11px">${dtStr}</td>
@@ -4274,12 +4275,12 @@ ${fobSummary.length>1?`<div style="display:flex;align-items:center;justify-conte
   </div>
   <div style="display:flex;align-items:center;gap:16px">
     <div style="font-size:14px;color:var(--tx2);display:flex;align-items:center">Orders: <b style="color:var(--navy);margin-left:4px">${purchases.length}</b></div>
-    <div style="font-size:14px;color:var(--tx2);display:flex;align-items:center">Qty: <b style="color:var(--navy);margin-left:4px">${totalQty}</b></div>
+    <div style="font-size:14px;color:var(--tx2);display:flex;align-items:center">Qty: <b style="color:var(--navy);margin-left:4px">${(Math.round(totalQty*100)/100).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</b></div>
     <div style="font-size:14px;color:var(--tx2);display:flex;align-items:center">Total: <b style="color:var(--green2);font-size:24px;margin-left:4px">$${totalAmt.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</b></div>
   </div>
 </div>`:`<div style="display:flex;align-items:center;justify-content:flex-end;gap:16px;margin-bottom:14px;margin-top:14px">
   <div style="font-size:12px;color:var(--tx2)">Orders: <b style="color:var(--navy)">${purchases.length}</b></div>
-  <div style="font-size:12px;color:var(--tx2)">Qty: <b style="color:var(--navy)">${totalQty}</b></div>
+  <div style="font-size:12px;color:var(--tx2)">Qty: <b style="color:var(--navy)">${(Math.round(totalQty*100)/100).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</b></div>
   <div style="font-size:12px;color:var(--tx2)">Total: <b style="color:var(--green2)">$${totalAmt.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</b></div>
 </div>`}
 ${purchases.length===0
@@ -4380,7 +4381,7 @@ function rPurchaseHistory(){
     const dtStr=r.dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     const priceStr=r.price!=null?'$'+parseFloat(r.price).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
     const amtStr=r.amount?'$'+parseFloat(r.amount).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
-    const qtyStr=r.qty!=null?r.qty:'—';
+    const qtyStr=r.qty!=null?(Math.round(r.qty*100)/100).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2}):'—';
     const numStr=r.num?String(r.num):'—';
     const hkmCell=S._phModalOpen
       ?`<td style="font-size:11px;font-weight:700;color:var(--navy)">${r.hkm}</td>`
@@ -4475,7 +4476,7 @@ function rPurchaseHistory(){
   </div>
   <div style="display:flex;align-items:center;gap:16px">
     <div style="font-size:14px;color:var(--tx2);display:flex;align-items:center">Orders: <b style="color:var(--navy);margin-left:4px">${filtered.length}</b></div>
-    <div style="font-size:14px;color:var(--tx2);display:flex;align-items:center">Qty: <b style="color:var(--navy);margin-left:4px">${totalQty}</b></div>
+    <div style="font-size:14px;color:var(--tx2);display:flex;align-items:center">Qty: <b style="color:var(--navy);margin-left:4px">${(Math.round(totalQty*100)/100).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})}</b></div>
     <div style="font-size:14px;color:var(--tx2);display:flex;align-items:center">Total: <b style="color:var(--green2);font-size:24px;margin-left:4px">$${totalAmt.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</b></div>
   </div>
 </div>
@@ -4494,7 +4495,7 @@ ${filtered.length===0
     <th>Invoice #</th>
   </tr></thead>
   <tbody>${tRows}</tbody>
-</table></div>${inModal?`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0 0;border-top:1px solid var(--bd);margin-top:10px;font-size:12px">${_rPgControls(_phPgd,_phPgKey)}</div>`:''}`}`;
+</table></div>${inModal?`<div class="ph-modal-pg" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0 0;border-top:1px solid var(--bd);margin-top:10px;font-size:12px;white-space:nowrap">${_rPgControls(_phPgd,_phPgKey)}</div>`:''}`}`;
 }
 
 function exportPurchaseHistory(fmt='csv'){
