@@ -5363,11 +5363,12 @@ function pruneOldData(){
       // Try to parse date from col labels (e.g. "Weekly 03/22", "MTH 01/15/26")
       const keepIdx=[];
       imp.cols.forEach((col,i)=>{
-        const m=String(col).match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+        // Only prune if col has an explicit year — otherwise keep to avoid accidental data loss
+        const m=String(col).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
         if(m){
-          const yr=m[3]?parseInt(m[3]):now.getFullYear();
+          const yr=parseInt(m[3]);
           const d=new Date(yr<100?(yr<50?2000+yr:1900+yr):yr,parseInt(m[1])-1,parseInt(m[2]));
-          if(!isNaN(d.getTime())&&d<cutoff)return; // skip old
+          if(!isNaN(d.getTime())&&d<cutoff)return; // skip old (only if year was explicit)
         }
         keepIdx.push(i);
       });
