@@ -1240,7 +1240,7 @@ function downloadTab(fmt){
     });
 
   }else if(tab==='plhistory'){
-    const periods=sortedPeriods();
+    const periods=sortedPeriods().filter(p=>p&&p.data&&Object.keys(p.data).length>0);
     const seen=new Set();let allItems=[];
     (casino.cats||[]).forEach(c=>{gI(casino.id,c).forEach(it=>{if(!seen.has(it.item)){seen.add(it.item);allItems.push(it);}});});
     headers=['No.','HKM','Item #','Description','UM'];
@@ -1630,7 +1630,11 @@ function rPLHist(){
 
   // Build item list from ALL HKM codes in the most recent period
   // This shows every item in HKM's price list, not filtered to casino bid items
-  const periods=sortedPeriods();
+  // Filter out empty periods (0 items) — safeguards against stale/legacy entries
+  const periods=sortedPeriods().filter(p=>p&&p.data&&Object.keys(p.data).length>0);
+  if(!periods.length){
+    return`<div class="al a-wn show" style="margin-bottom:12px">No price list data yet. Go to <b>Upload Hub &rarr; Import Master Files</b> and upload <b>MASTER__BIDDING_-_PRICE_COMP_-_PRICE_LIST.xlsx</b>.</div>`;
+  }
   const latestData=periods[0].data;
 
   // Build a lookup: hkm code → casino item (for current casino, to show Item #)
