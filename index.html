@@ -4347,14 +4347,25 @@ function rPurchaseHistory(){
   const qr=DB.qbeRows||{};
   // Gather ALL raw rows for this casino across all item codes
   const allRows=[];
+  // Build an HKM → description map, prioritizing: (1) current casino w/ desc, (2) any w/ desc, (3) any match
+  const hkmDescMap={};
+  Object.entries(DB.items||{}).forEach(([k,arr])=>{
+    const isCurrentCasino=k.startsWith(cid+'|');
+    (arr||[]).forEach(it=>{
+      const h=(it.hkm||'').trim();
+      if(!h)return;
+      const d=(it.desc||'').trim();
+      const existing=hkmDescMap[h];
+      // Priority: current casino with desc > any with desc > any match
+      if(!existing || (isCurrentCasino && d && !existing.fromCasino) || (d && !existing.desc)){
+        hkmDescMap[h]={desc:d,fromCasino:isCurrentCasino};
+      }
+    });
+  });
   Object.entries(qr).forEach(([key,rows])=>{
     if(!key.startsWith(cid+'|'))return;
     const hkm=key.split('|')[1];
-    // Find description from items
-    let desc='';
-    const allItems=Object.values(DB.items).flat();
-    const match=allItems.find(it=>(it.hkm||'').trim()===hkm);
-    if(match)desc=match.desc||'';
+    const desc=(hkmDescMap[hkm]&&hkmDescMap[hkm].desc)||'';
     rows.forEach(r=>allRows.push({hkm,desc,dt:new Date(r.dt),fob:r.fob&&r.fob.trim()?r.fob.trim():'No FOB',price:r.price,amount:r.amount,qty:r.qty,num:r.num}));
   });
   // Apply filters
@@ -4510,13 +4521,24 @@ function exportPurchaseHistory(fmt='csv'){
   const casino=DB.casinos.find(c=>c.id===cid);
   const qr=DB.qbeRows||{};
   const allRows=[];
+  // Build HKM → description map, prioritizing current casino + non-empty descriptions
+  const hkmDescMap={};
+  Object.entries(DB.items||{}).forEach(([k,arr])=>{
+    const isCurrentCasino=k.startsWith(cid+'|');
+    (arr||[]).forEach(it=>{
+      const h=(it.hkm||'').trim();
+      if(!h)return;
+      const d=(it.desc||'').trim();
+      const existing=hkmDescMap[h];
+      if(!existing || (isCurrentCasino && d && !existing.fromCasino) || (d && !existing.desc)){
+        hkmDescMap[h]={desc:d,fromCasino:isCurrentCasino};
+      }
+    });
+  });
   Object.entries(qr).forEach(([key,rows])=>{
     if(!key.startsWith(cid+'|'))return;
     const hkm=key.split('|')[1];
-    let desc='';
-    const allItems=Object.values(DB.items).flat();
-    const match=allItems.find(it=>(it.hkm||'').trim()===hkm);
-    if(match)desc=match.desc||'';
+    const desc=(hkmDescMap[hkm]&&hkmDescMap[hkm].desc)||'';
     rows.forEach(r=>allRows.push({hkm,desc,dt:new Date(r.dt),fob:r.fob||'',price:r.price,amount:r.amount,qty:r.qty,num:r.num}));
   });
   const fobFilter=S._phFobFilter||'';
