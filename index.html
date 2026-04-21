@@ -138,6 +138,10 @@ tbody tr:hover td,tbody tr:hover .s1,tbody tr:hover .s2{background:var(--bg3)!im
 .nc{color:var(--tx3);font-size:10px}
 .nbc{background:#fff8ec!important}
 tbody tr:hover .nbc{background:#fef0cc!important}
+.draftbid-tbl tbody tr.row-changed>td{background:#fff4b5}
+.draftbid-tbl tbody tr.row-changed>td.nbc{background:#ffeca0!important}
+.draftbid-tbl tbody tr.row-changed:hover>td{background:#ffe98a}
+.draftbid-tbl tbody tr.row-changed:hover>td.nbc{background:#ffe07a!important}
 input[type=text],input[type=number],select{padding:7px 10px;border-radius:var(--r);border:1px solid var(--bd2);font-size:13px;background:var(--bg2);color:var(--tx);font-family:inherit;transition:.15s;width:100%}
 input:focus,select:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(15,39,68,.08)}
 .nbi{width:74px;text-align:right;padding:4px 6px;border:2px solid var(--gold);border-radius:5px;font-size:12px;background:#fffdf5;color:var(--navy);font-weight:700}
@@ -1488,7 +1492,10 @@ ${(()=>{
   const nk=`${S.casino.id}|${S.cat}|${it.item}`;
   const nv=DB.newB[nk]?parseFloat(DB.newB[nk]):null;
   const ref=lps.v90||0;
-  return`<tr>
+  const costChanged=ac!=null&&bc!=null&&Math.abs(ac-bc)>0.001;
+  const regChanged=ar!=null&&br!=null&&Math.abs(ar-br)>0.001;
+  const priceChanged=costChanged||regChanged;
+  return`<tr${priceChanged?' class="row-changed"':''}>
     <td class="rn">${_drn}</td>
     <td class="s1" style="font-size:11px;color:#0c447c;font-weight:700">${it.hkm||'<span class="nc">—</span>'}</td>
     <td class="s2" style="font-size:11px">${it.item}</td>
