@@ -44,7 +44,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:#fff;color:var(--tx)
 @media(min-width:901px){#top-meta .tm-date-short{display:none}#top-meta .tm-date-full{display:inline}}
 #layout{display:flex;height:calc(100vh - 54px);overflow:hidden}
 #sb{width:var(--sbw);background:var(--navy);flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;transition:width .2s ease}
-#sb-content{flex:1;overflow-y:auto;overflow-x:hidden}
+#sb-content{flex:1;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.22) transparent}
+#sb-content::-webkit-scrollbar{width:6px}
+#sb-content::-webkit-scrollbar-track{background:transparent}
+#sb-content::-webkit-scrollbar-thumb{background:rgba(255,255,255,.22);border-radius:3px}
+#sb-content::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.38)}
 #sb-collapse-btn{flex-shrink:0;height:40px;border-top:1.5px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:9px;padding:0 22px;cursor:pointer;color:rgba(255,255,255,.75);font-size:13px;font-weight:500;transition:.15s;background:rgba(0,0,0,.18);user-select:none;font-family:inherit}
 #sb-collapse-btn:hover{color:#fff;background:rgba(0,0,0,.32)}
 #sb-collapse-btn .sb-icon{width:18px;text-align:center;flex-shrink:0;opacity:.85;display:flex;align-items:center;justify-content:center}
@@ -3739,6 +3743,22 @@ function getNextDue(dd){
       :thisMonth;
   }
 }
+// All weekly bids share one bucket that rolls over at Fri 5:00 PM PST,
+// so workflow + status reset together — not when each casino's own due passes.
+function _bidWeekEnd(){
+  const now=getPST();
+  const y=now.getFullYear(),mo=now.getMonth(),d=now.getDate();
+  const today=now.getDay();
+  let days=(5-today+7)%7;
+  if(days===0){
+    const fri5=makeLADeadline(y,mo,d,17,0);
+    if(Date.now()>=fri5.getTime())days=7;
+  }
+  return makeLADeadline(y,mo,d+days,17,0);
+}
+function _bidWeekId(){
+  return _bidWeekEnd().toISOString().slice(0,10);
+}
 function fmtCountdown(ms){
   if(ms<0)return'<span style="color:var(--red)">OVERDUE</span>';
   const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000),d=Math.floor(ms/86400000);
@@ -4716,6 +4736,7 @@ function exportAnalytics(cid,fmt='csv'){
 function _wfKey(ddOrId){
   const dd=typeof ddOrId==='string'?DUE_DATES.find(d=>d.id===ddOrId):ddOrId;
   if(!dd)return ddOrId;
+  if(dd.type==='weekly')return`${dd.id}_${_bidWeekId()}`;
   const next=getNextDue(dd);
   const ds=next.toISOString().slice(0,10);
   return`${dd.id}_${ds}`;
@@ -5504,16 +5525,7 @@ function getStatusKey(ddId){
   const now=getPST();
   const dd=DUE_DATES.find(d=>d.id===ddId);
   if(!dd)return ddId;
-  if(dd.type==='weekly'){
-    // Use the Monday of the week containing the next due date
-    // This makes the key stable for the ENTIRE bid week — never changes mid-week
-    const due=getNextDue(dd);
-    const dueDay=due.getDay(); // 0=Sun,1=Mon,...,4=Thu,5=Fri
-    const mondayOffset=(dueDay+6)%7; // days since Monday (Mon=0,Tue=1,...,Sun=6)
-    const monday=new Date(due);
-    monday.setDate(due.getDate()-mondayOffset);
-    return`${ddId}_w${monday.getFullYear()}-${String(monday.getMonth()+1).padStart(2,'0')}-${String(monday.getDate()).padStart(2,'0')}`;
-  }
+  if(dd.type==='weekly')return`${ddId}_w${_bidWeekId()}`;
   return`${ddId}_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 }
 function setBidStatus(ddId,val){
