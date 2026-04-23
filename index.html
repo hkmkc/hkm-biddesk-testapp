@@ -2342,7 +2342,7 @@ function saveBid(){
   });
   if(n===0){sal('bal','No new bid prices to save. Enter prices in the New Bid ★ column first.','er',0);toast('No bid prices found. Enter prices in the New Bid ★ column first.','er','Cannot Submit');return;}
   DB.savedBids[key]=DB.savedBids[key].filter(p=>p.lbl!==lbl);
-  DB.savedBids[key].unshift({id:'sb'+Date.now(),lbl,dt:fromEl.value,bids});
+  DB.savedBids[key].unshift({id:'sb'+Date.now(),lbl,dt:fromEl.value,dtTo:toEl.value,bids});
   if(DB.savedBids[key].length>30) DB.savedBids[key]=DB.savedBids[key].slice(0,30);
   its.forEach(it=>{const nk=`${S.casino.id}|${S.cat}|${it.item}`;delete DB.newB[nk];});
   // Push notification for team members — stored in DB so it syncs to their session via Supabase
@@ -2956,17 +2956,58 @@ function getLastBid(cid,cat,item){
   return null;
 }
 
+// _bidEffStatus: classify a saved-bid record by its effective-through window.
+// Returns 'future' (submitted but effective date is upcoming),
+// 'active' (currently within from..to), 'past' (effective window ended),
+// or null when no usable date info exists on the record.
+function _bidEffStatus(p){
+  if(!p||!p.dt)return null;
+  const from=new Date(p.dt+'T00:00:00');
+  if(isNaN(from.getTime()))return null;
+  let to=null;
+  if(p.dtTo){
+    to=new Date(p.dtTo+'T23:59:59');
+    if(isNaN(to.getTime()))to=null;
+  }
+  // Fallback: parse "M/DD - M/DD" label using the from-date's year
+  if(!to&&p.lbl){
+    const parts=String(p.lbl).split(/\s*-\s*/);
+    if(parts.length===2){
+      const m=parts[1].match(/(\d{1,2})\/(\d{1,2})/);
+      if(m){
+        let y=from.getFullYear();
+        const toMo=parseInt(m[1],10)-1;
+        const toDy=parseInt(m[2],10);
+        if(toMo<from.getMonth())y++; // label wraps across year boundary
+        to=new Date(y,toMo,toDy,23,59,59);
+      }
+    }
+  }
+  if(!to)return null;
+  const now=Date.now();
+  if(now<from.getTime())return'future';
+  if(now>to.getTime())return'past';
+  return'active';
+}
+// Returns {hdrBg, cellBg} style fragments for the given saved-bid record.
+function _bidEffStyle(p){
+  const s=_bidEffStatus(p);
+  if(s==='active') return{hdr:'background:#1d6a4a;',cell:'background:rgba(29,106,74,.1);'};
+  if(s==='future') return{hdr:'background:#d9a020;',cell:'background:rgba(217,160,32,.13);'};
+  return{hdr:'',cell:''};
+}
+
 // rBidHistImported: shows full historical bid table from imported master files
 function rBidHistSaved(savedBids){
   const its=applyFlt(gI(S.casino.id,S.cat),'bh');
   const active=its.filter(it=>savedBids.some(p=>p.bids&&p.bids[it.item]!=null));
   if(!active.length) return`<div class="sticky-ctrl">${rFltBar('bh',_rExpBtn())}</div>`+'<div style="padding:20px;color:var(--tx3);font-size:13px">No saved bids yet. Use Draft Bid → enter prices → SAVE BID.</div>';
-  const note=`<div style="font-size:11px;color:var(--tx2);margin-top:4px;margin-bottom:0">${savedBids.length} saved periods &nbsp;·&nbsp; ${active.length} items &nbsp;·&nbsp; <strong>*</strong> = most recent</div>`;
+  const note=`<div style="font-size:11px;color:var(--tx2);margin-top:4px;margin-bottom:0">${savedBids.length} saved periods &nbsp;·&nbsp; ${active.length} items &nbsp;·&nbsp; <strong>*</strong> = most recent &nbsp;·&nbsp; <span style="display:inline-block;width:9px;height:9px;background:#1d6a4a;border-radius:2px;vertical-align:middle"></span> effective &nbsp;·&nbsp; <span style="display:inline-block;width:9px;height:9px;background:#d9a020;border-radius:2px;vertical-align:middle"></span> upcoming</div>`;
   let h='<div class="tw twh"><table><thead><tr>';
   h+='<th class="sth" style="width:28px;min-width:28px;text-align:right">No.</th>';
   h+='<th class="s1 sth" style="min-width:70px">HKM</th><th class="s2 sth" style="min-width:70px">Item #</th>';
   h+='<th class="s3 sth" style="min-width:210px">Description</th><th style="width:50px">UM</th>';
-  savedBids.slice(0,26).forEach((p,i)=>{h+=`<th style="min-width:74px;${i===0?'background:#1d6a4a;':''}">${p.lbl}${i===0?' *':''}</th>`;});
+  savedBids.slice(0,26).forEach((p,i)=>{const st=_bidEffStyle(p);h+=`<th style="min-width:74px;${st.hdr}">${p.lbl}${i===0?' *':''}</th>`;});
   h+='</tr></thead><tbody>';
   const pgKey='bh_'+S.casino.id+'_'+S.cat;
   const pgd=doPg(active,pgKey);
@@ -2981,7 +3022,8 @@ function rBidHistSaved(savedBids){
       const pv=p.bids&&p.bids[it.item]!=null?p.bids[it.item]:null;
       const pp=i<savedBids.length-1&&savedBids[i+1].bids?savedBids[i+1].bids[it.item]||null:null;
       let cls='pr';if(pv!=null&&pp!=null){if(pv>pp)cls+=' pu';else if(pv<pp)cls+=' pd';}
-      h+=`<td class="${cls}" style="${i===0?'background:rgba(29,106,74,.08);':''}">${pv!=null?'$'+f(pv):'<span class="nc">—</span>'}</td>`;
+      const st=_bidEffStyle(p);
+      h+=`<td class="${cls}" style="${st.cell}">${pv!=null?'$'+f(pv):'<span class="nc">—</span>'}</td>`;
     });
     h+='</tr>';
   });
@@ -3012,7 +3054,9 @@ function rBidHistImported(impData,savedBids=[]){
   const note=`<div style="font-size:11px;color:var(--tx2);margin-top:4px;margin-bottom:0">
     Showing last ${totalShown} of ${allCols.length+savedBids.length} periods &nbsp;·&nbsp;
     ${active.length} of ${its.length} items have bid history &nbsp;·&nbsp;
-    <strong>*</strong> = most recent period
+    <strong>*</strong> = most recent period &nbsp;·&nbsp;
+    <span style="display:inline-block;width:9px;height:9px;background:#1d6a4a;border-radius:2px;vertical-align:middle"></span> effective &nbsp;·&nbsp;
+    <span style="display:inline-block;width:9px;height:9px;background:#d9a020;border-radius:2px;vertical-align:middle"></span> upcoming
   </div>`;
 
   let h='<div class="tw twh"><table><thead><tr>';
@@ -3020,9 +3064,10 @@ function rBidHistImported(impData,savedBids=[]){
   h+='<th class="s2 sth resizable-th" style="width:82px;min-width:82px">Item #</th>';
   h+='<th class="s3 sth resizable-th" style="width:220px;min-width:220px;max-width:220px">Description</th>';
   h+='<th style="width:50px;min-width:50px">UM</th>';
-  // Saved bid columns (newest, in green)
+  // Saved bid columns — colored by effective-through status, * on the most recent only
   savedCols.forEach((p,i)=>{
-    h+=`<th style="width:74px;min-width:74px;background:#1d6a4a;">${p.lbl} *</th>`;
+    const st=_bidEffStyle(p);
+    h+=`<th style="width:74px;min-width:74px;${st.hdr}">${p.lbl}${i===0?' *':''}</th>`;
   });
   // Imported columns
   showCols.forEach((col,i)=>{
@@ -3042,12 +3087,13 @@ function rBidHistImported(impData,savedBids=[]){
     h+=`<td class="s2" style="font-size:11px">${it.item}</td>`;
     h+=`<td class="desc-cell s3" title="${it.desc||''}" style="font-size:11px;max-width:200px">${it.desc}</td>`;
     h+=`<td style="font-size:11px;color:var(--tx2)">${it.unit}</td>`;
-    // Saved bid cells
+    // Saved bid cells — tint by effective-through status
     savedCols.forEach((p,i)=>{
       const pv=p.bids&&p.bids[it.item]!=null?p.bids[it.item]:null;
       const pp=i<savedCols.length-1&&savedCols[i+1].bids?savedCols[i+1].bids[it.item]||null:null;
       let cls='pr';if(pv!=null&&pp!=null){if(pv>pp)cls+=' pu';else if(pv<pp)cls+=' pd';}
-      h+=`<td class="${cls}" style="background:rgba(29,106,74,.1);">${pv!=null?'$'+f(pv):'<span class="nc">—</span>'}</td>`;
+      const st=_bidEffStyle(p);
+      h+=`<td class="${cls}" style="${st.cell}">${pv!=null?'$'+f(pv):'<span class="nc">—</span>'}</td>`;
     });
     // Imported cells
     origIdxs.forEach((origIdx,i)=>{
