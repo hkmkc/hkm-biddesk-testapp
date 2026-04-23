@@ -639,15 +639,76 @@ function dbSave(){
   if(SB) sbSync();
 }
 
-// Push full DB to a single Supabase row (key='hkm_main')
+// Push full DB to a single Supabase row (key='hkm_main').
+// Returns true on confirmed success, false on any failure.
 async function sbSync(){
-  if(!_sbReady){console.warn('Supabase push blocked — data not yet confirmed from server.');return;}
+  if(!_sbReady){console.warn('Supabase push blocked — data not yet confirmed from server.');return false;}
   try{
     const toSave=Object.assign({},DB);
     delete toSave._isAdmin;delete toSave._currentUser;delete toSave._openC;
+    delete toSave._pendingSyncs; // pending-sync queue is per-device, never synced
     // _savedAt is intentionally kept so Supabase carries the timestamp
-    await SB.from('app_data').upsert({key:'hkm_main', data: toSave, updated_at: new Date().toISOString()}, {onConflict:'key'});
-  }catch(e){console.warn('Supabase sync failed:',e.message);}
+    const {error}=await SB.from('app_data').upsert({key:'hkm_main', data: toSave, updated_at: new Date().toISOString()}, {onConflict:'key'});
+    if(error) throw error;
+    return true;
+  }catch(e){console.warn('Supabase sync failed:',e.message);return false;}
+}
+
+// ── Pending-sync queue (Fix 3) ────────────────────────────────
+// Each entry: {id, kind:'app_data'|'audit', payload, tries, ts}
+// app_data entries always push current DB state (payload ignored).
+// audit entries hold the specific row to insert into bid_submissions.
+function enqueuePending(kind, payload){
+  if(!DB._pendingSyncs) DB._pendingSyncs=[];
+  // Dedupe app_data entries — only the latest DB state matters, one retry is enough
+  if(kind==='app_data') DB._pendingSyncs=DB._pendingSyncs.filter(e=>e.kind!=='app_data');
+  DB._pendingSyncs.push({id:'ps'+Date.now()+'-'+Math.random().toString(36).slice(2,7),kind,payload,tries:0,ts:Date.now()});
+  try{localStorage.setItem('hkm_db',JSON.stringify(DB));}catch(e){}
+  _updatePendingBanner();
+}
+function _updatePendingBanner(){
+  const q=(DB._pendingSyncs||[]).length;
+  const bar=document.getElementById('alert-banner');
+  const msg=document.getElementById('alert-msg');
+  if(!bar||!msg)return;
+  if(q>0){
+    msg.innerHTML=`⚠ ${q} bid write${q>1?'s':''} not yet synced to cloud — retrying in background. <a href="#" onclick="drainPendingSyncs(true);return false" style="color:#7a4500;text-decoration:underline;margin-left:6px">Retry now</a>`;
+    bar.classList.add('show');
+  } else {
+    bar.classList.remove('show');
+  }
+}
+async function drainPendingSyncs(userInitiated){
+  if(!SB||!_sbReady){_updatePendingBanner();return;}
+  const queue=DB._pendingSyncs||[];
+  if(!queue.length){_updatePendingBanner();return;}
+  const stillPending=[];
+  let anyFailure=false,lastErr='';
+  for(const entry of queue){
+    try{
+      if(entry.kind==='audit'){
+        const {error}=await SB.from('bid_submissions').insert(entry.payload);
+        if(error) throw error;
+      } else if(entry.kind==='app_data'){
+        const toSave=Object.assign({},DB);
+        delete toSave._isAdmin;delete toSave._currentUser;delete toSave._openC;
+        delete toSave._pendingSyncs;
+        const {error}=await SB.from('app_data').upsert({key:'hkm_main', data:toSave, updated_at:new Date().toISOString()}, {onConflict:'key'});
+        if(error) throw error;
+      }
+    }catch(e){
+      entry.tries=(entry.tries||0)+1;
+      stillPending.push(entry);
+      anyFailure=true;lastErr=e.message||'unknown error';
+    }
+  }
+  DB._pendingSyncs=stillPending;
+  try{localStorage.setItem('hkm_db',JSON.stringify(DB));}catch(e){}
+  _updatePendingBanner();
+  if(userInitiated){
+    if(anyFailure) toast(`Retry failed: ${lastErr}. Will keep trying in background.`,'er','Sync Retry Failed',6000);
+    else toast('All pending writes synced to cloud.','ok','Queue Drained',4000);
+  }
 }
 
 // Pull latest data from Supabase — only applies if Supabase data is STRICTLY newer than local
@@ -676,6 +737,10 @@ async function sbLoad(forceRender=false, forceUsers=false){
       const _localPeriods=DB.periods?[...DB.periods]:[];
       const _localNewB=DB.newB&&Object.keys(DB.newB).length>0?{...DB.newB}:{};
       const _localAlertsSent=DB.alertsSent?{...DB.alertsSent}:{};
+      // Fix 2: snapshot savedBids so remote can't silently delete a submission the local device made
+      const _localSavedBids=DB.savedBids?JSON.parse(JSON.stringify(DB.savedBids)):null;
+      // Pending-sync queue is strictly per-device — do not let remote clobber
+      const _localPendingSyncs=Array.isArray(DB._pendingSyncs)?[...DB._pendingSyncs]:[];
       Object.assign(DB, data.data);
       DB._isAdmin=_isAdmin;DB._currentUser=_currentUser;DB._openC=_openC;
       // Merge bidStatus: local entries always win
@@ -696,6 +761,28 @@ async function sbLoad(forceRender=false, forceUsers=false){
         const localOnly=_localPeriods.filter(p=>!sbIds.has(p.id));
         if(localOnly.length) DB.periods=[...localOnly,...(DB.periods||[])].slice(0,12);
       }
+      // Fix 2: merge savedBids — union by id, local wins on id collision, newest-first, cap 30/key.
+      // Protects submissions on this device from being silently dropped by stale remote blobs.
+      if(_localSavedBids){
+        const remoteSB=DB.savedBids||{};
+        const allKeys=new Set([...Object.keys(remoteSB),...Object.keys(_localSavedBids)]);
+        const merged={};
+        allKeys.forEach(k=>{
+          const r=Array.isArray(remoteSB[k])?remoteSB[k]:[];
+          const l=Array.isArray(_localSavedBids[k])?_localSavedBids[k]:[];
+          const byId=new Map();
+          r.forEach(p=>{if(p&&p.id)byId.set(p.id,p);});
+          l.forEach(p=>{if(p&&p.id)byId.set(p.id,p);}); // local wins on id collision
+          merged[k]=[...byId.values()].sort((a,b)=>{
+            const ta=parseInt((a.id||'').replace(/^sb/,''),10)||0;
+            const tb=parseInt((b.id||'').replace(/^sb/,''),10)||0;
+            return tb-ta;
+          }).slice(0,30);
+        });
+        DB.savedBids=merged;
+      }
+      // Restore per-device pending-sync queue
+      DB._pendingSyncs=_localPendingSyncs;
       _sbReady=true;
       localStorage.setItem('hkm_db', JSON.stringify(DB));
       if(forceRender) render(); // only re-render if caller explicitly requests it
@@ -706,9 +793,13 @@ async function sbLoad(forceRender=false, forceUsers=false){
 dbLoad();
 // Initial Supabase load on page load — render=true so we get the latest data shown immediately
 setTimeout(()=>sbLoad(true), 500);
+// After the initial load settles, show pending-sync banner and try to drain queue
+setTimeout(()=>{_updatePendingBanner();drainPendingSyncs(false);}, 2500);
 // Background poll every 60s — never triggers render (no scroll reset, no lost work)
 setInterval(()=>{if(SB)sbLoad(false);}, 60000);
 setInterval(()=>{if(typeof rTopMeta==='function')rTopMeta();}, 60000);
+// Drain pending-sync queue every 30s — retries any bid write that failed to reach Supabase
+setInterval(()=>{drainPendingSyncs(false);}, 30000);
 
 // ── STATE ──
 const S={
@@ -2317,7 +2408,7 @@ function copyBid(){
   toast('Bid prices copied to clipboard!<br>Paste into Col 9 (Bid Price) of the casino sheet.','ok','Copied to Clipboard 📋');
 }
 
-function saveBid(){
+async function saveBid(){
   if(!DB._isAdmin){toast('Only admins can submit bids.','er','Access Denied');return;}
   const fromEl=document.getElementById('eff-from');
   const toEl=document.getElementById('eff-to');
@@ -2341,16 +2432,62 @@ function saveBid(){
     if(nb&&nb!==''){bids[it.item]=parseFloat(nb);n++;}
   });
   if(n===0){sal('bal','No new bid prices to save. Enter prices in the New Bid ★ column first.','er',0);toast('No bid prices found. Enter prices in the New Bid ★ column first.','er','Cannot Submit');return;}
+  // Apply the local mutation (Fix 1: local is the source of truth; cloud is the replica)
   DB.savedBids[key]=DB.savedBids[key].filter(p=>p.lbl!==lbl);
   DB.savedBids[key].unshift({id:'sb'+Date.now(),lbl,dt:fromEl.value,dtTo:toEl.value,bids});
   if(DB.savedBids[key].length>30) DB.savedBids[key]=DB.savedBids[key].slice(0,30);
   its.forEach(it=>{const nk=`${S.casino.id}|${S.cat}|${it.item}`;delete DB.newB[nk];});
-  // Push notification for team members — stored in DB so it syncs to their session via Supabase
   const casinoName=S.casino.name||S.casino.id;
   addNotif(`📋 New pricing submitted: ${casinoName} — ${S.cat}. Effective ${lbl}.`,'green');
-  dbSave();
-  sal('bal',`✓ ${n} bid prices saved — effective ${lbl}`,'ok');
-  toast(`${n} bid price${n>1?'s':''} fully submitted for ${S.casino?.short||S.casino?.id||''} — ${S.cat}.<br>Effective: <b>${lbl}</b>`,'ok','Bid Submitted ✓',6000);
+  // Persist to localStorage immediately; sync is handled below so we can await the result
+  DB._savedAt=new Date().toISOString();
+  try{localStorage.setItem('hkm_db',JSON.stringify(DB));}catch(e){}
+  // Fix 4: append-only audit row — immutable record of this submit that cannot be overwritten by last-write-wins
+  const auditPayload={
+    casino_id:S.casino.id,
+    category:S.cat,
+    lbl, dt:fromEl.value, dt_to:toEl.value,
+    bids, item_count:n,
+    submitted_by:(DB._currentUser&&DB._currentUser.email)||'unknown'
+  };
+  // Fix 1: verify the Supabase write before declaring success.
+  // If cloud isn't reachable / returns an error, the bid stays safe in localStorage
+  // and both writes are enqueued on the pending-sync queue for automatic retry.
+  if(!SB||!_sbReady){
+    enqueuePending('app_data',null);
+    enqueuePending('audit',auditPayload);
+    sal('bal',`⚠ ${n} bid prices saved locally — cloud offline, will sync automatically.`,'wn',0);
+    toast(`${n} bid price${n>1?'s':''} saved locally for ${S.casino?.short||S.casino?.id||''} — ${S.cat}.<br>Effective: <b>${lbl}</b>. Cloud offline — will sync when reconnected.`,'wn','Saved Locally',8000);
+    render();
+    return;
+  }
+  const blobOk=await sbSync();
+  let auditOk=false,auditErr='';
+  if(blobOk){
+    try{
+      const {error}=await SB.from('bid_submissions').insert(auditPayload);
+      if(error) throw error;
+      auditOk=true;
+    }catch(e){
+      auditErr=e.message||'unknown';
+      console.warn('Audit log insert failed; enqueueing for retry:',auditErr);
+      enqueuePending('audit',auditPayload);
+    }
+  } else {
+    enqueuePending('app_data',null);
+    enqueuePending('audit',auditPayload);
+  }
+  if(blobOk&&auditOk){
+    sal('bal',`✓ ${n} bid prices saved — effective ${lbl}`,'ok');
+    toast(`${n} bid price${n>1?'s':''} fully submitted for ${S.casino?.short||S.casino?.id||''} — ${S.cat}.<br>Effective: <b>${lbl}</b>`,'ok','Bid Submitted ✓',6000);
+    drainPendingSyncs(false); // opportunistic drain of any older pending items
+  } else if(blobOk){
+    sal('bal',`✓ ${n} bid prices synced — audit log retry pending.`,'wn',0);
+    toast(`${n} bid price${n>1?'s':''} synced for ${S.casino?.short||S.casino?.id||''} — ${S.cat}.<br>Effective: <b>${lbl}</b>.<br>Audit log queued for retry.`,'wn','Submitted — Audit Pending',7000);
+  } else {
+    sal('bal',`⚠ ${n} bid prices saved locally — cloud sync failed, will retry.`,'wn',0);
+    toast(`${n} bid price${n>1?'s':''} saved locally for ${S.casino?.short||S.casino?.id||''} — ${S.cat}.<br>Effective: <b>${lbl}</b>.<br>Cloud sync pending — will retry automatically.`,'wn','Sync Pending',10000);
+  }
   render();
 }
 
