@@ -3139,12 +3139,22 @@ function rBidHistSaved(savedBids){
   const its=applyFlt(gI(S.casino.id,S.cat),'bh');
   const active=its.filter(it=>savedBids.some(p=>p.bids&&p.bids[it.item]!=null));
   if(!active.length) return`<div class="sticky-ctrl">${rFltBar('bh',_rExpBtn())}</div>`+'<div style="padding:20px;color:var(--tx3);font-size:13px">No saved bids yet. Use Draft Bid → enter prices → SAVE BID.</div>';
+  // Display-sort saved bids by effective from-date descending — left=latest → right=oldest,
+  // independent of submission order. Keeps the view chronological when bids are submitted late.
+  const displayBids=savedBids.slice(0,26).slice().sort((a,b)=>{
+    const ta=a&&a.dt?Date.parse(a.dt+'T00:00:00'):0;
+    const tb=b&&b.dt?Date.parse(b.dt+'T00:00:00'):0;
+    if(tb!==ta) return tb-ta;
+    const sa=parseInt((a&&a.id||'').replace(/^sb/,''),10)||0;
+    const sb=parseInt((b&&b.id||'').replace(/^sb/,''),10)||0;
+    return sb-sa;
+  });
   const note=`<div style="font-size:11px;color:var(--tx2);margin-top:4px;margin-bottom:0">${savedBids.length} saved periods &nbsp;·&nbsp; ${active.length} items &nbsp;·&nbsp; <strong>*</strong> = most recent &nbsp;·&nbsp; <span style="display:inline-block;width:9px;height:9px;background:#1d6a4a;border-radius:2px;vertical-align:middle"></span> effective &nbsp;·&nbsp; <span style="display:inline-block;width:9px;height:9px;background:#d9a020;border-radius:2px;vertical-align:middle"></span> upcoming</div>`;
   let h='<div class="tw twh"><table><thead><tr>';
   h+='<th class="sth" style="width:28px;min-width:28px;text-align:right">No.</th>';
   h+='<th class="s1 sth" style="min-width:70px">HKM</th><th class="s2 sth" style="min-width:70px">Item #</th>';
   h+='<th class="s3 sth" style="min-width:210px">Description</th><th style="width:50px">UM</th>';
-  savedBids.slice(0,26).forEach((p,i)=>{const st=_bidEffStyle(p);h+=`<th style="min-width:74px;${st.hdr}">${p.lbl}${i===0?' *':''}</th>`;});
+  displayBids.forEach((p,i)=>{const st=_bidEffStyle(p);h+=`<th style="min-width:74px;${st.hdr}">${p.lbl}${i===0?' *':''}</th>`;});
   h+='</tr></thead><tbody>';
   const pgKey='bh_'+S.casino.id+'_'+S.cat;
   const pgd=doPg(active,pgKey);
@@ -3155,9 +3165,10 @@ function rBidHistSaved(savedBids){
     h+=`<td class="s2" style="font-size:11px">${it.item}</td>`;
     h+=`<td class="desc-cell s3" title="${it.desc||''}" style="font-size:11px">${it.desc}</td>`;
     h+=`<td style="font-size:11px;color:var(--tx2)">${it.unit}</td>`;
-    savedBids.slice(0,26).forEach((p,i)=>{
+    displayBids.forEach((p,i)=>{
       const pv=p.bids&&p.bids[it.item]!=null?p.bids[it.item]:null;
-      const pp=i<savedBids.length-1&&savedBids[i+1].bids?savedBids[i+1].bids[it.item]||null:null;
+      // Compare against the next column to the RIGHT (older effective date) for ▲/▼ direction
+      const pp=i<displayBids.length-1&&displayBids[i+1].bids?displayBids[i+1].bids[it.item]||null:null;
       let cls='pr';if(pv!=null&&pp!=null){if(pv>pp)cls+=' pu';else if(pv<pp)cls+=' pd';}
       const st=_bidEffStyle(p);
       h+=`<td class="${cls}" style="${st.cell}">${pv!=null?'$'+f(pv):'<span class="nc">—</span>'}</td>`;
@@ -3176,7 +3187,17 @@ function rBidHistImported(impData,savedBids=[]){
   const showCols=allCols.slice().reverse().slice(0,maxImp);
   const origIdxs=showCols.map(c=>allCols.indexOf(c));
 
-  const savedCols=savedBids.slice(0,6); // up to 6 most recent saved bids shown first
+  // Take the 6 most recently submitted, then display-sort by effective from-date descending
+  // so columns read left=latest → right=oldest regardless of submission order (late re-submits
+  // don't jump ahead of later-dated bids).
+  const savedCols=savedBids.slice(0,6).slice().sort((a,b)=>{
+    const ta=a&&a.dt?Date.parse(a.dt+'T00:00:00'):0;
+    const tb=b&&b.dt?Date.parse(b.dt+'T00:00:00'):0;
+    if(tb!==ta) return tb-ta;
+    const sa=parseInt((a&&a.id||'').replace(/^sb/,''),10)||0;
+    const sb=parseInt((b&&b.id||'').replace(/^sb/,''),10)||0;
+    return sb-sa;
+  });
   const totalShown=savedCols.length+showCols.length;
 
   let active=its.filter(it=>{
