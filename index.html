@@ -2658,6 +2658,9 @@ function closePasteModal(){
 function confirmPaste(){
   const raw=document.getElementById('paste-area').value;
   const lines=raw.split('\n');
+  // Trim trailing blank lines (Excel copy often adds a stray newline at the end).
+  // Leading/middle blanks are preserved — they still mean "no change for that item".
+  while(lines.length&&!lines[lines.length-1].trim()) lines.pop();
   // Two plausible alignments depending on how the user built the paste:
   //   (a) "full-category" — pasted from the casino sheet, one line per item
   //       (with blanks for items they don't want to change). This matches
