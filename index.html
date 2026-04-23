@@ -562,10 +562,13 @@ tr:hover .del-row{opacity:1}
   <div style="background:#fff;border-radius:12px;padding:24px;width:90%;max-width:480px;box-shadow:0 8px 32px rgba(0,0,0,.18)">
     <div style="font-size:16px;font-weight:800;color:var(--navy);margin-bottom:6px">Paste Bid Prices</div>
     <div style="font-size:12px;color:var(--tx2);line-height:1.7;margin-bottom:14px">
-      Copy the <b>bid price column</b> from your Excel sheet and paste below.<br>
-      One price per line, in the <b>same order as the rows currently shown</b> in the Draft Bid table.<br>
-      Blank lines = no change for that item.<br>
-      <span style="color:var(--gold2);font-weight:700">Tip:</span> clear <em>HKM Only</em> / <em>Priced Only</em> / search filters first if your Excel lists every item — the paste aligns to the visible rows.
+      Copy the <b>bid price column</b> from your Excel sheet and paste below. One price per line. Blank lines = no change for that item.<br>
+      <span style="color:var(--gold2);font-weight:700">Alignment is auto-detected</span> from the paste length:
+      <ul style="margin:4px 0 0 18px;padding:0">
+        <li>Line count matches the <b>full casino sheet</b> → aligns to every item (including rows hidden by filters)</li>
+        <li>Line count matches the <b>visible rows</b> → aligns to just what's on screen</li>
+        <li>Neither matches exactly → you'll be asked to confirm</li>
+      </ul>
     </div>
     <label class="fl">Paste prices here (one per line)</label>
     <textarea id="paste-area" rows="12" style="width:100%;padding:8px 10px;border:1px solid var(--bd2);border-radius:var(--r);font-family:monospace;font-size:13px;resize:vertical;margin-bottom:14px" placeholder="24.99&#10;3.39&#10;&#10;69.50&#10;119.00&#10;..."></textarea>
@@ -2655,17 +2658,39 @@ function closePasteModal(){
 function confirmPaste(){
   const raw=document.getElementById('paste-area').value;
   const lines=raw.split('\n');
-  // Align paste with the filtered list the user actually sees on screen
-  // (same filters as the Draft Bid table: deleted-item removal + HKM Only + Priced Only + search).
-  // Using raw gI() here caused prices to land on the wrong rows whenever
-  // deleted items or any filter offset the visible order.
-  const its=applyFlt(gI(S.casino.id,S.cat),'db');
-  // Count real (non-blank) price lines so we can warn if the structure doesn't match
-  const nonBlankLines=lines.reduce((n,l)=>n+(l.trim()?1:0),0);
-  // If paste line count > visible items, we'd run off the end. Warn and let the user confirm.
-  if(lines.length>its.length+2){
-    const ok=confirm(`Paste has ${lines.length} lines but only ${its.length} items are visible with the current filters.\n\nThis usually means the paste doesn't match the on-screen list. Prices past row ${its.length} will be ignored.\n\nOK to apply anyway? (Cancel to adjust filters first.)`);
+  // Two plausible alignments depending on how the user built the paste:
+  //   (a) "full-category" — pasted from the casino sheet, one line per item
+  //       (with blanks for items they don't want to change). This matches
+  //       the UNDELETED item list regardless of filters.
+  //   (b) "visible-only" — pasted matching exactly the filtered rows on
+  //       screen. This matches applyFlt(gI(...), 'db').
+  // We detect which is intended by comparing the line count to each list.
+  const unfiltered=gI(S.casino.id,S.cat);
+  const dkey=S.casino?(S.casino.id+'|'+(S.cat||'')):'';
+  const delSet=DB.delItems&&DB.delItems[dkey]?new Set(DB.delItems[dkey]):new Set();
+  const undeleted=unfiltered.filter(it=>!delSet.has(it.item));
+  const filtered=applyFlt(gI(S.casino.id,S.cat),'db');
+  let its, modeLabel;
+  if(undeleted.length===filtered.length){
+    // No filters hiding anything — the two lists are identical
+    its=filtered; modeLabel=`${filtered.length} items`;
+  } else if(lines.length===undeleted.length){
+    // Paste length matches full category → casino-sheet style
+    its=undeleted; modeLabel=`full category (${undeleted.length} items, ${undeleted.length-filtered.length} hidden by filter)`;
+  } else if(lines.length===filtered.length){
+    // Paste length matches visible rows → user pasted only what they see
+    its=filtered; modeLabel=`visible rows only (${filtered.length} items)`;
+  } else {
+    // Neither matches. Don't guess — ask.
+    const ok=confirm(
+      `Paste has ${lines.length} lines but neither list matches exactly:\n`+
+      `   • Full category: ${undeleted.length} items\n`+
+      `   • Visible with current filters: ${filtered.length} items\n\n`+
+      `Default: map to the ${filtered.length} visible rows. Lines past row ${filtered.length} will be ignored.\n\n`+
+      `OK to proceed? (Cancel to adjust your paste or clear filters first.)`
+    );
     if(!ok)return;
+    its=filtered; modeLabel=`visible rows (${filtered.length} items; ${lines.length} pasted — mismatched)`;
   }
   let applied=0,skipped=0;
   its.forEach((it,i)=>{
@@ -2679,9 +2704,8 @@ function confirmPaste(){
   });
   dbSave();
   closePasteModal();
-  const ctx=`${its.length} visible items${nonBlankLines?', '+nonBlankLines+' prices in paste':''}`;
-  sal('bal',`${applied} prices pasted (${ctx})${skipped?' — '+skipped+' blank/skipped':''}. Review margins, then copy to casino sheet.`,'ok');
-  toast(`${applied} bid price${applied>1?'s':''} pasted successfully.${skipped?'<br>'+skipped+' blank/invalid rows skipped.':''}<br>Mapped to ${its.length} visible rows. Review margins, then click Submit Bid.`,'ok','Prices Pasted ✓');
+  sal('bal',`${applied} prices pasted → ${modeLabel}${skipped?' — '+skipped+' blank/zero skipped':''}. Review margins, then copy to casino sheet.`,'ok');
+  toast(`${applied} bid price${applied!==1?'s':''} pasted${skipped?', '+skipped+' blank/zero skipped':''}.<br>Mapped to: <b>${modeLabel}</b>.<br>Review margins, then click Submit Bid.`,'ok','Prices Pasted ✓',7000);
   render();
 }
 
