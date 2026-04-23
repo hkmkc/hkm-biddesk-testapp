@@ -563,8 +563,9 @@ tr:hover .del-row{opacity:1}
     <div style="font-size:16px;font-weight:800;color:var(--navy);margin-bottom:6px">Paste Bid Prices</div>
     <div style="font-size:12px;color:var(--tx2);line-height:1.7;margin-bottom:14px">
       Copy the <b>bid price column</b> from your Excel sheet and paste below.<br>
-      One price per line, in the <b>same order as the items</b> in this sheet.<br>
-      Blank lines = no change for that item.
+      One price per line, in the <b>same order as the rows currently shown</b> in the Draft Bid table.<br>
+      Blank lines = no change for that item.<br>
+      <span style="color:var(--gold2);font-weight:700">Tip:</span> clear <em>HKM Only</em> / <em>Priced Only</em> / search filters first if your Excel lists every item — the paste aligns to the visible rows.
     </div>
     <label class="fl">Paste prices here (one per line)</label>
     <textarea id="paste-area" rows="12" style="width:100%;padding:8px 10px;border:1px solid var(--bd2);border-radius:var(--r);font-family:monospace;font-size:13px;resize:vertical;margin-bottom:14px" placeholder="24.99&#10;3.39&#10;&#10;69.50&#10;119.00&#10;..."></textarea>
@@ -2654,7 +2655,18 @@ function closePasteModal(){
 function confirmPaste(){
   const raw=document.getElementById('paste-area').value;
   const lines=raw.split('\n');
-  const its=gI(S.casino.id,S.cat);
+  // Align paste with the filtered list the user actually sees on screen
+  // (same filters as the Draft Bid table: deleted-item removal + HKM Only + Priced Only + search).
+  // Using raw gI() here caused prices to land on the wrong rows whenever
+  // deleted items or any filter offset the visible order.
+  const its=applyFlt(gI(S.casino.id,S.cat),'db');
+  // Count real (non-blank) price lines so we can warn if the structure doesn't match
+  const nonBlankLines=lines.reduce((n,l)=>n+(l.trim()?1:0),0);
+  // If paste line count > visible items, we'd run off the end. Warn and let the user confirm.
+  if(lines.length>its.length+2){
+    const ok=confirm(`Paste has ${lines.length} lines but only ${its.length} items are visible with the current filters.\n\nThis usually means the paste doesn't match the on-screen list. Prices past row ${its.length} will be ignored.\n\nOK to apply anyway? (Cancel to adjust filters first.)`);
+    if(!ok)return;
+  }
   let applied=0,skipped=0;
   its.forEach((it,i)=>{
     const line=(lines[i]||'').trim().replace(/[$,]/g,'');
@@ -2667,8 +2679,9 @@ function confirmPaste(){
   });
   dbSave();
   closePasteModal();
-  sal('bal',`${applied} prices pasted from manager Excel${skipped?' ('+skipped+' blank/skipped)':''} — review margins below, then copy to casino sheet.`,'ok');
-  toast(`${applied} bid price${applied>1?'s':''} pasted successfully.${skipped?'<br>'+skipped+' blank/invalid rows skipped.':''}<br>Review margins, then click Submit Bid.`,'ok','Prices Pasted ✓');
+  const ctx=`${its.length} visible items${nonBlankLines?', '+nonBlankLines+' prices in paste':''}`;
+  sal('bal',`${applied} prices pasted (${ctx})${skipped?' — '+skipped+' blank/skipped':''}. Review margins, then copy to casino sheet.`,'ok');
+  toast(`${applied} bid price${applied>1?'s':''} pasted successfully.${skipped?'<br>'+skipped+' blank/invalid rows skipped.':''}<br>Mapped to ${its.length} visible rows. Review margins, then click Submit Bid.`,'ok','Prices Pasted ✓');
   render();
 }
 
