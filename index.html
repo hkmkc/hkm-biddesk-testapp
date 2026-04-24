@@ -811,7 +811,7 @@ const S={
   bTab:'draftbid',uTab:'qbe',plTab:'hist',
   selW:new Set(WK.slice(-8).map(w=>w.id)),
   wf:'all',cA:0,cB:1,wkDropOpen:false,
-  pg:{},pgSz:10,flt:{hkmOnly:false,pricedOnly:false,q:''},
+  pg:{},pgSz:50,flt:{hkmOnly:false,pricedOnly:false,q:''},
   ovCasino:null,
 };
 
@@ -1000,7 +1000,7 @@ function render(){
     document.documentElement.style.setProperty('--sticky-tabs-h', st?(st.offsetHeight+1)+'px':'0px');
   });
 }
-function nav(v,o={}){const viewChanged=S.view!==v;Object.assign(S,{view:v},...[o]);if(viewChanged){S.pgSz=undefined;S.pg={};}updateHash();render();}
+function nav(v,o={}){const viewChanged=S.view!==v;Object.assign(S,{view:v},...[o]);if(viewChanged){S.pgSz=S.pgSz||50;S.pg={};}updateHash();render();}
 
 function updateHash(){
   let h='dashboard';
@@ -2401,6 +2401,8 @@ function hCasino(inp){
       data.forEach(it=>{if(!it.hkm && hmap[it.item])it.hkm=hmap[it.item];});
       // FULL REPLACEMENT — casino's current list is the source of truth for item order and membership
       DB.items[`${cid}|${cat}`]=data;
+      // Clear soft-deleted rows — re-upload is a full refresh so stale deletions would hide valid items
+      if(DB.delItems&&DB.delItems[`${cid}|${cat}`]) delete DB.delItems[`${cid}|${cat}`];
       dbSave();hProg('cs');
       const removed=prevCount-data.length;
       const cas=DB.casinos.find(c=>c.id===cid);
@@ -3688,7 +3690,7 @@ function importPriceListMaster(file){
 // ── Pagination ──
 let _footerPg=null; // stores current page's pagination data for the footer
 function doPg(items, key){
-  const page=S.pg[key]||0, sz=S.pgSz||10;
+  const page=S.pg[key]||0, sz=S.pgSz||50;
   const total=items.length;
   const start=page*sz, end=Math.min(start+sz,total);
   const pgd={items:items.slice(start,end),total,page,pgSz:sz,start,end,key};
@@ -3773,12 +3775,17 @@ function onFltQ(el,key){
 }
 function rFltBar(scope,rightSlot=''){
   const flt=S.flt||{};
+  const sz=S.pgSz||50;
+  const szOpts=[25,50,100,999].map(n=>`<option value="${n}"${sz===n?' selected':''}>${n===999?'All':n}</option>`).join('');
   return`<div class="fbar" style="margin-bottom:0">
     <span class="ftag${flt.hkmOnly?' on':''}" onclick="S.flt.hkmOnly=!S.flt.hkmOnly;S.pg={};render()">HKM Only</span>
     <span class="ftag${flt.pricedOnly?' on':''}" onclick="S.flt.pricedOnly=!S.flt.pricedOnly;S.pg={};render()">Priced Only</span>
     <input class="fsearch" data-fk="q" placeholder="Search HKM / Item# / Desc…" value="${flt.q||''}" oninput="onFltQ(this,'q')">
     ${(flt.hkmOnly||flt.pricedOnly||flt.q)?'<span class="ftag" onclick="S.flt={};S.pg={};render()" style="color:var(--red);border-color:#f7c1c1">✕ Clear</span>':''}
-    ${rightSlot?`<div style="margin-left:auto">${rightSlot}</div>`:''}
+    <span style="margin-left:auto;display:flex;align-items:center;gap:5px;font-size:11px;color:var(--tx3)">Rows
+      <select style="font-size:11px;padding:2px 4px;border:1px solid var(--bd);border-radius:4px;background:var(--bg2);color:var(--tx1);cursor:pointer" onchange="S.pgSz=+this.value===999?99999:+this.value;S.pg={};render()">${szOpts}</select>
+    </span>
+    ${rightSlot?`<div style="margin-left:8px">${rightSlot}</div>`:''}
   </div>`;
 }
 function _rPHBtn(){
