@@ -636,24 +636,32 @@ function dbLoad(){
     });
   }
 }
+// ── Debounce timer for Supabase writes ──────────────────────────
+// Rapid changes (e.g. typing bid prices quickly) are coalesced into
+// a single upsert after 2 s of inactivity instead of one per keystroke.
+let _sbSyncTimer=null;
 function dbSave(){
   DB._savedAt=new Date().toISOString(); // timestamp for conflict resolution
   try{localStorage.setItem('hkm_db',JSON.stringify(DB));}catch(e){}
-  // Sync to Supabase if connected
-  if(SB) sbSync();
+  // Debounced sync — wait 2 s for rapid successive saves to settle
+  if(SB){clearTimeout(_sbSyncTimer);_sbSyncTimer=setTimeout(sbSync,2000);}
 }
 
 // Push full DB to a single Supabase row (key='hkm_main').
 // Returns true on confirmed success, false on any failure.
+// Also updates _lastKnownSbTs so the background poll doesn't re-download our own write.
+let _lastKnownSbTs=null; // tracks the remote updated_at we last saw
 async function sbSync(){
   if(!_sbReady){console.warn('Supabase push blocked — data not yet confirmed from server.');return false;}
   try{
+    const ts=new Date().toISOString();
     const toSave=Object.assign({},DB);
     delete toSave._isAdmin;delete toSave._currentUser;delete toSave._openC;
     delete toSave._pendingSyncs; // pending-sync queue is per-device, never synced
     // _savedAt is intentionally kept so Supabase carries the timestamp
-    const {error}=await SB.from('app_data').upsert({key:'hkm_main', data: toSave, updated_at: new Date().toISOString()}, {onConflict:'key'});
+    const {error}=await SB.from('app_data').upsert({key:'hkm_main', data: toSave, updated_at: ts}, {onConflict:'key'});
     if(error) throw error;
+    _lastKnownSbTs=ts; // we wrote this — poll can skip downloading it back
     return true;
   }catch(e){console.warn('Supabase sync failed:',e.message);return false;}
 }
@@ -720,11 +728,13 @@ async function drainPendingSyncs(userInitiated){
 async function sbLoad(forceRender=false, forceUsers=false){
   if(!SB) return;
   try{
-    const {data,error} = await SB.from('app_data').select('data').eq('key','hkm_main').single();
+    const {data,error} = await SB.from('app_data').select('data,updated_at').eq('key','hkm_main').single();
     if(data&&data.data){
+      // Track the remote timestamp so sbPoll() can skip re-downloading our own writes
+      if(data.updated_at) _lastKnownSbTs=data.updated_at;
       const sbTime=data.data._savedAt?new Date(data.data._savedAt).getTime():0;
       const localTime=DB._savedAt?new Date(DB._savedAt).getTime():0;
-      // Skip if local is same age or newer — prevents the 60s poll from overwriting and re-rendering
+      // Skip if local is same age or newer — prevents poll from overwriting and re-rendering
       if(sbTime>0&&localTime>0&&sbTime<=localTime){
         // Even when skipping full sync, always refresh user list from Supabase during login
         if(forceUsers&&data.data._users&&data.data._users.length){
@@ -799,8 +809,24 @@ dbLoad();
 setTimeout(()=>sbLoad(true), 500);
 // After the initial load settles, show pending-sync banner and try to drain queue
 setTimeout(()=>{_updatePendingBanner();drainPendingSyncs(false);}, 2500);
-// Background poll every 60s — never triggers render (no scroll reset, no lost work)
-setInterval(()=>{if(SB)sbLoad(false);}, 60000);
+// ── Smart background poll (every 5 min) ──────────────────────────────────────
+// Downloads only the tiny `updated_at` timestamp first (~100 bytes).
+// Only does the full blob fetch if another device actually changed data.
+// Also pauses when the tab is hidden to save egress when app is open but unused.
+async function sbPoll(){
+  if(!SB||!_sbReady) return;
+  if(document.visibilityState==='hidden') return; // tab not visible — skip
+  try{
+    const {data}=await SB.from('app_data').select('updated_at').eq('key','hkm_main').single();
+    if(!data) return;
+    const remoteTs=data.updated_at;
+    if(remoteTs&&remoteTs===_lastKnownSbTs) return; // no change — skip full download
+    // Something changed on another device — do the full sync
+    _lastKnownSbTs=remoteTs;
+    sbLoad(false);
+  }catch(e){}
+}
+setInterval(sbPoll, 300000); // every 5 minutes (was 60 s — ~80% egress reduction)
 setInterval(()=>{if(typeof rTopMeta==='function')rTopMeta();}, 60000);
 // Drain pending-sync queue every 30s — retries any bid write that failed to reach Supabase
 setInterval(()=>{drainPendingSyncs(false);}, 30000);
