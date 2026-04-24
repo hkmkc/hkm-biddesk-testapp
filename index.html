@@ -2619,6 +2619,8 @@ function hAddBid(inp){
       const hmap={};old.forEach(it=>{if(it.hkm)hmap[it.item]=it.hkm;});
       data.forEach(it=>{if(!it.hkm && hmap[it.item])it.hkm=hmap[it.item];});
       DB.items[`${cid}|${cat}`]=data;
+      // Clear soft-deleted rows — re-upload is a full refresh so stale deletions would hide valid items
+      if(DB.delItems&&DB.delItems[`${cid}|${cat}`]) delete DB.delItems[`${cid}|${cat}`];
       dbSave();hProg('ab');
       sal('aba',`${data.length} items loaded for ${cat}. Category now appears in the sidebar.`,'ok');
       rSB();inp.value='';
@@ -6059,11 +6061,25 @@ function openSettingsPanel(e){
   if(pw2El) pw2El.value='';
   const msg=document.getElementById('set-msg-f');
   if(msg) msg.textContent='';
+  // Show admin-only tools section
+  const adminSec=document.getElementById('set-admin-tools');
+  if(adminSec) adminSec.style.display=DB._isAdmin?'block':'none';
   sp.style.display='block';
 }
 function closeSettingsPanel(){
   const sp=document.getElementById('settings-panel-float');
   if(sp) sp.style.display='none';
+}
+function clearAllHiddenRows(){
+  if(!DB._isAdmin){toast('Only admins can use this.','er','Access Denied');return;}
+  const count=Object.keys(DB.delItems||{}).length;
+  if(!count){toast('No hidden rows found — nothing to clear.','ok','All Clear');return;}
+  if(!confirm(`This will unhide all previously hidden rows across every casino and category (${count} entr${count===1?'y':'ies'}).\n\nContinue?`))return;
+  DB.delItems={};
+  dbSave();
+  closeSettingsPanel();
+  render();
+  toast(`Done — ${count} hidden-row entr${count===1?'y':'ies'} cleared across all casinos.`,'ok','Hidden Rows Cleared',5000);
 }
 function saveSettingsPanel(){
   const name=(document.getElementById('set-name-f')||{}).value||'';
@@ -6316,6 +6332,15 @@ window.addEventListener('hashchange',function(){
   <div style="display:flex;gap:8px">
     <button onclick="saveSettingsPanel()" style="flex:1;padding:9px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Save</button>
     <button onclick="closeSettingsPanel()" style="flex:1;padding:9px;background:var(--bg3);color:var(--tx);border:1px solid var(--bd2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+  </div>
+  <!-- Admin-only tools — visibility toggled by openSettingsPanel() -->
+  <div id="set-admin-tools" style="display:none;margin-top:18px;padding-top:14px;border-top:1.5px solid var(--bd)">
+    <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--tx3);margin-bottom:10px">🔧 Admin Tools</div>
+    <div style="background:#fff8ec;border:1px solid #f0d080;border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div style="font-size:12px;font-weight:700;color:#7a5500;margin-bottom:3px">Clear All Hidden Rows</div>
+      <div style="font-size:11px;color:#7a5500;margin-bottom:8px;line-height:1.4">Unhides every row that was manually hidden across all casinos and categories. Use this if rows are missing after re-uploading a casino sheet.</div>
+      <button onclick="clearAllHiddenRows()" style="width:100%;padding:7px;background:#c07800;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;transition:.15s" onmouseover="this.style.background='#a06000'" onmouseout="this.style.background='#c07800'">Unhide All Rows</button>
+    </div>
   </div>
 </div>
 
