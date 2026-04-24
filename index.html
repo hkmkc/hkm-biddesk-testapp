@@ -2331,6 +2331,9 @@ function parseSheetFile(file, onSuccess, onError){
       let itemCol = findCol(['item no','item#','item num','item code','item id','item']);
       let descCol = findCol(['description','desc','product name','name']);
       let unitCol = findCol(['unit','um','uom','pack','size']);
+      // HKM code column — present when HKM's own export is uploaded (e.g. updated code GSPA→GSPAA)
+      // Checked BEFORE itemCol keywords so 'hkm code' never gets captured as 'item code'
+      let hkmCol  = findCol(['hkm code','our code','hkm col','hkm']);
 
       // Fall back to RWLV positional format (col 2=item, 3=desc, 7=unit) if headers not found
       if(itemCol<0) itemCol=2;
@@ -2344,7 +2347,8 @@ function parseSheetFile(file, onSuccess, onError){
           // Strip embedded newlines/carriage returns from description (casino files often have them)
           desc:(r[descCol]||'').toString().replace(/[\r\n]+/g,' ').trim(),
           unit:(r[unitCol]||'').toString().replace(/[\r\n]+/g,' ').trim(),
-          hkm:'',
+          // Read HKM code from sheet if column exists — allows code updates (e.g. GSPA → GSPAA)
+          hkm: hkmCol>=0 ? (r[hkmCol]||'').toString().trim() : '',
         }))
         // Filter out obvious non-item rows (totals, notes, blank item numbers)
         .filter(r=>r.item.length>2&&!/^(total|note|subtotal|page)/i.test(r.item));
@@ -2380,18 +2384,22 @@ function hCasino(inp){
   sProg('cs');
   parseSheetFile(file,
     function(data){
-      // Preserve our HKM codes — never take anything from the casino sheet except item#/desc/unit
+      // HKM code merge logic:
+      //  • If the uploaded sheet has an HKM code for this item → use the new one (allows GSPA→GSPAA updates)
+      //  • If the sheet has no HKM code column (hkm='') → restore whatever was manually assigned before
+      // This means uploading an updated sheet with a new HKM code column will pick up the change.
       const old=DB.items[`${cid}|${cat}`]||[];
       const prevCount=old.length;
       const hmap={};old.forEach(it=>{if(it.hkm)hmap[it.item]=it.hkm;});
-      data.forEach(it=>{if(hmap[it.item])it.hkm=hmap[it.item];});
+      data.forEach(it=>{if(!it.hkm && hmap[it.item])it.hkm=hmap[it.item];});
       // FULL REPLACEMENT — casino's current list is the source of truth for item order and membership
       DB.items[`${cid}|${cat}`]=data;
       dbSave();hProg('cs');
       const removed=prevCount-data.length;
       const cas=DB.casinos.find(c=>c.id===cid);
-      sal('ca',`✓ ${cas?.name||cid} › ${cat} updated to ${data.length} items (was ${prevCount}${removed>0?' — '+removed+' items removed':''}). HKM codes preserved. Bid history and QBE data untouched.`,'ok');
-      toast(`<b>${cas?.name||cid} — ${cat}</b> updated.<br>${data.length} items loaded (was ${prevCount})${removed>0?'<br><b>'+removed+' item'+(removed>1?'s':'')+' removed</b> — no longer in casino sheet.':''}<br>HKM codes, bid history &amp; volumes preserved.`,'ok','Casino Sheet Updated 🏨',6000);
+      const hkmUpdated=data.filter(it=>it.hkm&&hmap[it.item]&&hmap[it.item]!==it.hkm).length;
+      sal('ca',`✓ ${cas?.name||cid} › ${cat} updated to ${data.length} items (was ${prevCount}${removed>0?' — '+removed+' items removed':''}${hkmUpdated>0?' — '+hkmUpdated+' HKM code(s) updated':' — HKM codes preserved'}). Bid history and QBE data untouched.`,'ok');
+      toast(`<b>${cas?.name||cid} — ${cat}</b> updated.<br>${data.length} items loaded (was ${prevCount})${removed>0?'<br><b>'+removed+' item'+(removed>1?'s':'')+' removed</b> — no longer in casino sheet.':''}${hkmUpdated>0?'<br><b>'+hkmUpdated+' HKM code(s) updated</b> from uploaded sheet.':''}<br>Bid history &amp; volumes preserved.`,'ok','Casino Sheet Updated 🏨',6000);
       rSB();render();inp.value='';
     },
     function(err){hProg('cs');sal('ca',err,'er',0);inp.value='';}
@@ -2597,10 +2605,10 @@ function hAddBid(inp){
     function(data){
       const casino=DB.casinos.find(c=>c.id===cid);
       if(casino&&!casino.cats.includes(cat))casino.cats.push(cat);
-      // Preserve HKM codes if category already existed
+      // HKM code merge: use new code from sheet if provided, else restore old manual assignment
       const old=DB.items[`${cid}|${cat}`]||[];
       const hmap={};old.forEach(it=>{if(it.hkm)hmap[it.item]=it.hkm;});
-      data.forEach(it=>{if(hmap[it.item])it.hkm=hmap[it.item];});
+      data.forEach(it=>{if(!it.hkm && hmap[it.item])it.hkm=hmap[it.item];});
       DB.items[`${cid}|${cat}`]=data;
       dbSave();hProg('ab');
       sal('aba',`${data.length} items loaded for ${cat}. Category now appears in the sidebar.`,'ok');
