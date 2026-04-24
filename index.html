@@ -2132,7 +2132,14 @@ function hQBE(inp){
         }
         const grp={};
         parsed.forEach(r=>{if(!grp[r.code])grp[r.code]=[];grp[r.code].push(r);});
+        // Full clean sweep for this casino before rebuilding — since the uploaded file
+        // is always a complete QBE history, any leftover entries from a previous upload
+        // (e.g. items the casino stopped ordering) would be stale. Wipe and rebuild fresh.
+        if(!DB.lps)DB.lps={};
         if(!DB.qbeRows)DB.qbeRows={};
+        const prefix=cid+'|';
+        Object.keys(DB.lps).forEach(k=>{if(k.startsWith(prefix))delete DB.lps[k];});
+        Object.keys(DB.qbeRows).forEach(k=>{if(k.startsWith(prefix))delete DB.qbeRows[k];});
         let n=0;
         Object.entries(grp).forEach(([code,rows])=>{
           const latest=rows.sort((a,b)=>b.dt-a.dt||b.num-a.num)[0];
