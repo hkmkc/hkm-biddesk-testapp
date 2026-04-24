@@ -2449,9 +2449,10 @@ async function saveBid(){
   const its=gI(S.casino.id,S.cat);
   const bids={};let n=0;
   its.forEach(it=>{
-    // Only submit prices for items HKM actually carries (has an HKM code)
+    // Only submit prices for items HKM actually carries — skip blank HKM code only
+    // NOTE: 'NO SKU' = special order HKM does bid; only truly blank = skip
     const hkmCode=(it.hkm||'').trim();
-    if(!hkmCode||hkmCode.toUpperCase()==='NO SKU') return;
+    if(!hkmCode) return;
     const nk=`${S.casino.id}|${S.cat}|${it.item}`,nb=DB.newB[nk];
     if(nb&&nb!==''){bids[it.item]=parseFloat(nb);n++;}
   });
@@ -2738,9 +2739,10 @@ function confirmPaste(){
 function copyDraftBid(){
   const its=gI(S.casino.id,S.cat);
   const lines=its.map(it=>{
-    // Items with no HKM code are not carried by HKM — always copy as blank
+    // Items with a blank HKM code are not carried by HKM — always copy as blank
+    // NOTE: 'NO SKU' = special order HKM does bid; only truly blank = skip
     const hkmCode=(it.hkm||'').trim();
-    if(!hkmCode||hkmCode.toUpperCase()==='NO SKU') return '';
+    if(!hkmCode) return '';
     const nk=`${S.casino.id}|${S.cat}|${it.item}`;
     const nb=DB.newB[nk];
     if(nb&&nb!=='')return parseFloat(nb).toFixed(2);
@@ -2992,10 +2994,11 @@ function runAutoPrice() {
   its.forEach(it => {
     const nk = S.casino.id+'|'+S.cat+'|'+it.item;
 
-    // Items with no HKM code are not carried by HKM — never auto-price them.
+    // Items with a blank HKM code are not carried by HKM — never auto-price them.
+    // NOTE: 'NO SKU' = special order HKM does bid; only truly blank = skip.
     // Also clear any stale price that may have leaked in from a previous run.
     const hkmCode = (it.hkm||'').trim();
-    if (!hkmCode || hkmCode.toUpperCase() === 'NO SKU') {
+    if (!hkmCode) {
       delete DB.newB[nk];
       holds++;
       return;
@@ -3766,11 +3769,11 @@ function applyFlt(items, scope){
   out=out.filter(it=>!del.has(it.item));
   // HKM only filter
   if(flt.hkmOnly)out=out.filter(it=>it.hkm&&it.hkm.trim());
-  // Priced only filter — must have an HKM code AND a last bid price
+  // Priced only filter — must have an HKM code (or NO SKU) AND a last bid price
+  // NOTE: 'NO SKU' = special order HKM does bid; only truly blank = skip
   if(flt.pricedOnly){
     out=out.filter(it=>{
-      const hkmCode=(it.hkm||'').trim();
-      if(!hkmCode||hkmCode.toUpperCase()==='NO SKU') return false;
+      if(!(it.hkm||'').trim()) return false;
       const lb=S.casino?getLastBid(S.casino.id,S.cat||'',it.item):null;
       return lb!=null;
     });
