@@ -2985,16 +2985,26 @@ function runAutoPrice() {
   let applied=0, holds=0, increases=0, decreases=0, costDeltaHits=0, marginFloorHits=0, qbHits=0, uomMismatches=0;
 
   its.forEach(it => {
+    const nk = S.casino.id+'|'+S.cat+'|'+it.item;
+
+    // Items with no HKM code are not carried by HKM — never auto-price them.
+    // Also clear any stale price that may have leaked in from a previous run.
+    const hkmCode = (it.hkm||'').trim();
+    if (!hkmCode || hkmCode.toUpperCase() === 'NO SKU') {
+      delete DB.newB[nk];
+      holds++;
+      return;
+    }
+
     const lps = gL(S.casino.id, it.item, it.hkm);
     // Look up cost by HKM code (period data keyed by HKM), fall back to item code
-    const _key = it.hkm && it.hkm.trim() ? it.hkm.trim() : it.item;
+    const _key = hkmCode;
     const acCost = (pa.data[_key]?.cost) || (pa.data[it.item]?.cost) || null;
     const acReg  = (pa.data[_key]?.reg)  || (pa.data[it.item]?.reg)  || null;  // QB price
     const bcCost = pb ? ((pb.data[_key]?.cost) || (pb.data[it.item]?.cost) || null) : null;
 
     // Last bid: use getLastBid() which checks savedBids → bidH → impBH
     const lb = getLastBid(S.casino.id, S.cat, it.item);
-    const nk = S.casino.id+'|'+S.cat+'|'+it.item;
 
     if (lb == null) { holds++; return; } // can't price without a last bid
 
