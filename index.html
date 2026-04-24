@@ -3881,13 +3881,69 @@ function _rExpBtn(id='exp-dd-tab'){
 }
 
 // ── Delete Row ──
+let _rowDelPending=null; // {key, item}
+
 function delRow(key, item){
   if(!DB._isAdmin){toast('Only admins can delete items.','er','Access Denied');return;}
-  if(!confirm('Remove this row from display?'))return;
-  if(!DB.delItems)DB.delItems={};
-  if(!DB.delItems[key])DB.delItems[key]=[];
-  if(!DB.delItems[key].includes(item))DB.delItems[key].push(item);
-  dbSave();render();
+  // Look up description from DB.items (no need to pass through onclick attribute)
+  const allItems=DB.items[key]||[];
+  const it=allItems.find(x=>x.item===item);
+  const desc=it?it.desc:'';
+  _rowDelPending={key,item,desc};
+  const lbl=document.getElementById('row-del-lbl');
+  const inp=document.getElementById('row-del-input');
+  const err=document.getElementById('row-del-err');
+  const modal=document.getElementById('row-del-modal');
+  if(lbl) lbl.textContent=`Item #: ${item}${desc?' — '+desc:''}`;
+  if(inp) inp.value='';
+  if(err) err.textContent='';
+  if(modal) modal.style.display='flex';
+}
+function closeRowDelModal(){
+  _rowDelPending=null;
+  const modal=document.getElementById('row-del-modal');
+  if(modal) modal.style.display='none';
+}
+function confirmRowDelete(){
+  const inp=document.getElementById('row-del-input');
+  const err=document.getElementById('row-del-err');
+  if(!inp||inp.value.trim().toLowerCase()!=='delete'){
+    if(err) err.textContent='Type "delete" to confirm.';
+    if(inp) inp.focus();
+    return;
+  }
+  if(!_rowDelPending){closeRowDelModal();return;}
+  const {key,item}=_rowDelPending;
+  const parts=key.split('|');
+  const cid=parts[0],cat=parts[1];
+
+  // 1. Remove from items list
+  if(DB.items[key]) DB.items[key]=DB.items[key].filter(it=>it.item!==item);
+
+  // 2. Remove from soft-delete list (cleanup — no longer needed)
+  if(DB.delItems&&DB.delItems[key]){
+    DB.delItems[key]=DB.delItems[key].filter(i=>i!==item);
+    if(!DB.delItems[key].length) delete DB.delItems[key];
+  }
+
+  // 3. Remove bid price history
+  delete DB.bidH[`${cid}|${cat}|${item}`];
+
+  // 4. Remove draft bid price
+  delete DB.newB[`${cid}|${cat}|${item}`];
+
+  // 5. Remove from all saved bid periods for this category
+  if(DB.savedBids&&DB.savedBids[key]){
+    DB.savedBids[key].forEach(period=>{if(period.bids)delete period.bids[item];});
+  }
+
+  // 6. Remove from imported bid history
+  if(DB.impBH&&DB.impBH[key]&&DB.impBH[key].rows) delete DB.impBH[key].rows[item];
+
+  dbSave();
+  closeRowDelModal();
+  render();
+  toast(`Item ${item} permanently removed from ${cat}.`,'ok','Row Deleted',4000);
 }
 
 // ── Column Resize ──
@@ -6430,6 +6486,22 @@ window.addEventListener('hashchange',function(){
     <div style="display:flex;gap:8px">
       <button onclick="confirmSbDelete()" style="flex:1;padding:10px;background:#c0392b;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Delete</button>
       <button onclick="closeSbDeleteModal()" style="flex:1;padding:10px;background:var(--bg3);color:var(--tx);border:1px solid var(--bd2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ROW HARD DELETE MODAL -->
+<div id="row-del-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3001;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;padding:28px 32px;width:90%;max-width:400px;box-shadow:0 16px 48px rgba(0,0,0,.25)">
+    <div style="font-size:16px;font-weight:800;color:var(--navy);margin-bottom:6px">Delete Row?</div>
+    <div style="font-size:13px;color:var(--tx2);margin-bottom:4px">You are about to permanently delete:</div>
+    <div id="row-del-lbl" style="font-size:13px;font-weight:700;color:#c0392b;background:#fff0f0;border-radius:6px;padding:6px 10px;margin-bottom:16px"></div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:6px">Type <strong>delete</strong> to confirm. This cannot be undone.</div>
+    <input id="row-del-input" type="text" placeholder='Type "delete" here' onkeydown="if(event.key==='Enter')confirmRowDelete()" style="width:100%;padding:10px 12px;border:1.5px solid var(--bd2);border-radius:8px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;margin-bottom:6px">
+    <div id="row-del-err" style="font-size:11px;color:#c0392b;min-height:16px;margin-bottom:12px"></div>
+    <div style="display:flex;gap:8px">
+      <button onclick="confirmRowDelete()" style="flex:1;padding:10px;background:#c0392b;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">Delete</button>
+      <button onclick="closeRowDelModal()" style="flex:1;padding:10px;background:var(--bg3);color:var(--tx);border:1px solid var(--bd2);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
     </div>
   </div>
 </div>
