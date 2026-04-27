@@ -809,6 +809,8 @@ dbLoad();
 setTimeout(()=>sbLoad(true), 500);
 // After the initial load settles, show pending-sync banner and try to drain queue
 setTimeout(()=>{_updatePendingBanner();drainPendingSyncs(false);}, 2500);
+// One-time data migration after Supabase load completes
+setTimeout(()=>{try{_migrateMonthlyWfKeys();}catch(e){console.warn('wf migration failed:',e&&e.message);}}, 3000);
 // ── Smart background poll (every 5 min) ──────────────────────────────────────
 // Downloads only the tiny `updated_at` timestamp first (~100 bytes).
 // Only does the full blob fetch if another device actually changed data.
@@ -5114,9 +5116,32 @@ function _wfKey(ddOrId){
   const dd=typeof ddOrId==='string'?DUE_DATES.find(d=>d.id===ddOrId):ddOrId;
   if(!dd)return ddOrId;
   if(dd.type==='weekly')return`${dd.id}_${_bidWeekId()}`;
-  const next=getNextDue(dd);
-  const ds=next.toISOString().slice(0,10);
-  return`${dd.id}_${ds}`;
+  // Monthly: key by current calendar month (YYYY-MM). Rolls only on the 1st of
+  // the next month — completed steps stay visible after the individual due date
+  // passes, so the user can see the work was done. Mirrors getStatusKey's behavior.
+  const now=getPST();
+  return`${dd.id}_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+}
+// One-time migration: any pre-existing monthly _wfKey entries used YYYY-MM-DD
+// (the next-due-date). Copy them to the new YYYY-MM format so already-tracked
+// steps stay visible after this update. Idempotent via DB._wfMonthlyMigrated.
+function _migrateMonthlyWfKeys(){
+  if(!DB||!DB.wf||DB._wfMonthlyMigrated)return;
+  const monthlyIds=new Set((typeof DUE_DATES!=='undefined'?DUE_DATES:[]).filter(d=>d.type==='monthly').map(d=>d.id));
+  let migrated=0;
+  Object.keys(DB.wf).forEach(k=>{
+    const m=k.match(/^(.+)_(\d{4})-(\d{2})-(\d{2})$/);
+    if(!m)return;
+    const ddId=m[1], y=m[2], mo=m[3];
+    if(!monthlyIds.has(ddId))return; // weekly keys also end in YYYY-MM-DD; leave alone
+    const newKey=`${ddId}_${y}-${mo}`;
+    if(DB.wf[newKey])return; // newer key already wins
+    DB.wf[newKey]=DB.wf[k];
+    delete DB.wf[k];
+    migrated++;
+  });
+  DB._wfMonthlyMigrated=true;
+  if(migrated>0)dbSave();
 }
 function toggleWfStep(ddId,step){
   if(!DB._isAdmin)return;
