@@ -3856,8 +3856,11 @@ function importPriceListMaster(file){
 
       if(!periods.length){hProg('pl2');sal('pl2-al','No price periods found. Check the file format.','er',0);return;}
 
-      // Take 12 most recent periods
-      const usePeriods=periods.slice(0,12);
+      // Take up to 24 most recent periods from the file. Date-based retention
+      // (_trimPeriodsRetention) will cull anything outside the last-month-onwards
+      // window after merge — so this cap just bounds the parse work, not the
+      // final stored set. 24 is the safety upper bound used elsewhere.
+      const usePeriods=periods.slice(0,24);
 
       const newPeriods=usePeriods.map(function(p,idx){
         const pData={};
