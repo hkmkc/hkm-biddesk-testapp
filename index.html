@@ -811,6 +811,14 @@ setTimeout(()=>sbLoad(true), 500);
 setTimeout(()=>{_updatePendingBanner();drainPendingSyncs(false);}, 2500);
 // One-time data migration after Supabase load completes
 setTimeout(()=>{try{_migrateMonthlyWfKeys();}catch(e){console.warn('wf migration failed:',e&&e.message);}}, 3000);
+// Auto-cleanup any duplicate or corrupted periods inherited from older uploads.
+// Idempotent — runs every load, only mutates if something needs fixing.
+setTimeout(()=>{
+  try{
+    const removed=_cleanupPeriods();
+    if(removed>0){console.log(`Cleaned ${removed} duplicate/corrupted period(s) from DB.periods`); dbSave();}
+  }catch(e){console.warn('periods cleanup failed:',e&&e.message);}
+}, 3500);
 // ── Smart background poll (every 5 min) ──────────────────────────────────────
 // Downloads only the tiny `updated_at` timestamp first (~100 bytes).
 // Only does the full blob fetch if another device actually changed data.
@@ -959,6 +967,53 @@ function _trimPeriodsRetention(){
     return !ts || ts >= cutoff; // keep if no parseable date OR date is recent enough
   });
   if(DB.periods.length>24) DB.periods=sortedPeriods().slice(0,24);
+  return before-DB.periods.length;
+}
+// Sanity check on a parsed period's data: returns true if the keys look like real
+// HKM/item codes (mostly alphanumeric, length>=2). Catches the parser-misread bug
+// where rows[5] returned raw row indices like "10","11","12".
+function _periodLooksValid(period){
+  if(!period||!period.data)return false;
+  const keys=Object.keys(period.data);
+  if(!keys.length)return false;
+  let numericish=0, hkmish=0;
+  for(const k of keys){
+    if(/^\d+$/.test(k)) numericish++;
+    else if(k.length>=3 && /[A-Za-z]/.test(k)) hkmish++;
+  }
+  // Treat as corrupted if at least 50 keys are pure-numeric AND fewer than 5 are HKM-shaped
+  return !(numericish>=50 && hkmish<5);
+}
+// Hard dedupe: keep one entry per (bid_type, lbl). When duplicates exist,
+// prefer the entry with more HKM-shaped keys (drops corrupted lookalikes).
+// Returns count removed.
+function _dedupePeriods(){
+  if(!DB.periods||!DB.periods.length)return 0;
+  const before=DB.periods.length;
+  const score=p=>{
+    if(!p||!p.data)return -1;
+    let s=0;
+    for(const k of Object.keys(p.data)){if(k.length>=3 && /[A-Za-z]/.test(k))s++;}
+    return s;
+  };
+  const map=new Map();
+  for(const p of DB.periods){
+    if(!p)continue;
+    const key=`${p.bid_type||''}|${p.lbl||''}`;
+    const prev=map.get(key);
+    if(!prev || score(p)>score(prev)) map.set(key,p);
+  }
+  DB.periods=[...map.values()];
+  return before-DB.periods.length;
+}
+// One-time cleanup that runs on app boot: dedupe + drop corrupted periods.
+// Idempotent — safe to run on every load.
+function _cleanupPeriods(){
+  if(!DB||!DB.periods||!DB.periods.length)return 0;
+  const before=DB.periods.length;
+  DB.periods=DB.periods.filter(_periodLooksValid);
+  _dedupePeriods();
+  DB.periods=sortedPeriods();
   return before-DB.periods.length;
 }
 const gH=(cid,cat,item)=>DB.bidH[`${cid}|${cat}|${item}`]||new Array(WK.length).fill(null);
@@ -2308,9 +2363,20 @@ function hPL(inp){
         }
         const d=new Date();
         const dt=(d.getMonth()+1).toString().padStart(2,'0')+'/'+d.getDate().toString().padStart(2,'0')+'/'+d.getFullYear().toString().slice(2);
+        // Validate the parsed QBE before merging — same guardrail as master upload.
+        const candidate={id:'p'+Date.now(),lbl,dt,data,bid_type:bidType};
+        if(!_periodLooksValid(candidate)){
+          hProg('pl');
+          const samp=Object.keys(data).slice(0,5).join(', ')||'(empty)';
+          const msg=`Import aborted — parsed item codes look wrong (sample: ${samp}). Price List History is unchanged. Check the file's column layout.`;
+          sal('pa',msg,'er',0);
+          toast(msg,'er','Import Aborted',0);
+          inp.value='';return;
+        }
         DB.periods=DB.periods.filter(p=>!(p.bid_type===bidType&&p.lbl===lbl));
-        DB.periods.unshift({id:'p'+Date.now(),lbl,dt,data,bid_type:bidType});
+        DB.periods.unshift(candidate);
         DB.periods=sortedPeriods();
+        _dedupePeriods();
         _trimPeriodsRetention(); // date-based retention (last-month-onwards) replaces old 12-cap
         // Save locally first
         DB._savedAt=new Date().toISOString();
@@ -3752,24 +3818,51 @@ function importPriceListMaster(file){
         return{id:'pl'+idx, lbl:p.lbl, dt:p.lbl, data:pData, bid_type:p.bidType};
       });
 
+      // GUARDRAIL 1 — validation: reject the whole import if any parsed period
+      // looks corrupted (mostly numeric keys instead of HKM codes). This catches
+      // the parser-misread bug before it touches DB.periods.
+      const validNew=newPeriods.filter(_periodLooksValid);
+      const droppedInvalid=newPeriods.length-validNew.length;
+      if(!validNew.length){
+        hProg('pl2');
+        const samp=Object.keys(newPeriods[0]?.data||{}).slice(0,5).join(', ')||'(empty)';
+        const msg=`Import aborted — parsed item codes look wrong (sample: ${samp}). DB.periods is unchanged. Check the Excel file's "Price History" sheet structure (Item column should be col F).`;
+        sal('pl2-al',msg,'er',0);
+        toast(msg,'er','Import Aborted',0);
+        return;
+      }
+      // GUARDRAIL 2 — preview confirm. Show the user what's about to land before
+      // we mutate the synced blob. Only triggers for master imports (not QBE one-offs).
+      const sampleHKMs=Object.keys(validNew[0]?.data||{}).slice(0,4).join(', ');
+      const summary=`About to import ${validNew.length} period(s) into Price List History:\n\n`+
+        validNew.slice(0,8).map(p=>`  • ${p.bid_type||'?'} — ${p.lbl} (${Object.keys(p.data||{}).length} items)`).join('\n')+
+        (validNew.length>8?`\n  …and ${validNew.length-8} more`:'')+
+        `\n\nSample item codes from the first period: ${sampleHKMs}\n\n`+
+        (droppedInvalid>0?`Note: ${droppedInvalid} corrupted period(s) were detected and skipped.\n\n`:'')+
+        `OK to proceed? (Cancel keeps your current Price List History as-is.)`;
+      if(!confirm(summary)){
+        hProg('pl2');
+        sal('pl2-al','Import cancelled. Your Price List History was not modified.','wn',6000);
+        toast('Import cancelled — Price List History unchanged.','wn','Cancelled',5000);
+        return;
+      }
       // MERGE (not replace): upsert by bid_type+lbl so previous periods are preserved
-      // across re-uploads. This prevents the 'previous dates show no data' bug where
-      // a fresh master replaced everything in DB.periods.
-      const existing=Array.isArray(DB.periods)?DB.periods.slice():[];
-      newPeriods.forEach(np=>{
-        const idx=existing.findIndex(ep=>ep&&ep.bid_type===np.bid_type&&ep.lbl===np.lbl);
-        if(idx>=0) existing.splice(idx,1);
-      });
-      DB.periods=[...newPeriods,...existing];
+      // across re-uploads. Use filter (removes ALL matches) instead of findIndex+splice
+      // (which only removed the first), so any pre-existing duplicates also get cleared.
+      const newKeys=new Set(validNew.map(p=>`${p.bid_type||''}|${p.lbl||''}`));
+      const kept=(Array.isArray(DB.periods)?DB.periods:[]).filter(ep=>!newKeys.has(`${ep&&ep.bid_type||''}|${ep&&ep.lbl||''}`));
+      DB.periods=[...validNew,...kept];
       DB.periods=sortedPeriods();
-      const trimmed=_trimPeriodsRetention(); // keep last-month-onwards only
+      _dedupePeriods();                           // belt-and-braces: ensure unique (bid_type,lbl)
+      DB.periods=DB.periods.filter(_periodLooksValid); // strip any pre-existing corruption
+      const trimmed=_trimPeriodsRetention();      // keep last-month-onwards only
       S.cA=0; S.cB=Math.min(1,DB.periods.length-1);
       dbSave();hProg('pl2');
-      const n=Object.keys(newPeriods[0]?.data||{}).length;
+      const n=Object.keys(validNew[0]?.data||{}).length;
       render();
       const tail=trimmed>0?` (${trimmed} older period${trimmed!==1?'s':''} pruned)`:'';
-      toast(`${usePeriods.length} periods, ${n} items imported${tail}. Total in history: ${DB.periods.length}. Draft Bid comparison updated.`,'ok','Price List Imported 📋',7000);
-      sal('pl2-al',`✓ Price List imported: ${usePeriods.length} new period${usePeriods.length!==1?'s':''}, ${n} items. Total: ${DB.periods.length} period${DB.periods.length!==1?'s':''}${tail}. Draft Bid comparison updated.`,'ok',8000);
+      toast(`${validNew.length} period${validNew.length!==1?'s':''}, ${n} items imported${tail}. Total in history: ${DB.periods.length}. Draft Bid comparison updated.`,'ok','Price List Imported 📋',7000);
+      sal('pl2-al',`✓ Price List imported: ${validNew.length} new period${validNew.length!==1?'s':''}, ${n} items. Total: ${DB.periods.length} period${DB.periods.length!==1?'s':''}${tail}. Draft Bid comparison updated.`,'ok',8000);
     }catch(err){hProg('pl2');toast('Import failed: '+err.message,'er','Import Error',0);sal('pl2-al','Error: '+err.message,'er',0);}
   };
   reader.readAsArrayBuffer(file);
