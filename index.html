@@ -5337,26 +5337,34 @@ function _wfKey(ddOrId){
   const now=getPST();
   return`${dd.id}_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 }
-// One-time migration: any pre-existing monthly _wfKey entries used YYYY-MM-DD
-// (the next-due-date). Copy them to the new YYYY-MM format so already-tracked
-// steps stay visible after this update. Idempotent via DB._wfMonthlyMigrated.
+// Migrate any monthly _wfKey entries still in YYYY-MM-DD form to the new YYYY-MM
+// shape. Runs every load (idempotent + cheap). When a current-format key already
+// exists, the orphan YYYY-MM-DD entry is *removed* — the current key wins and
+// the stale duplicate gets out of the way (was previously left dangling and
+// could grow over time as multiple tabs created old-format keys before
+// upgrading their code).
 function _migrateMonthlyWfKeys(){
-  if(!DB||!DB.wf||DB._wfMonthlyMigrated)return;
+  if(!DB||!DB.wf)return;
   const monthlyIds=new Set((typeof DUE_DATES!=='undefined'?DUE_DATES:[]).filter(d=>d.type==='monthly').map(d=>d.id));
-  let migrated=0;
+  let migrated=0,cleaned=0;
   Object.keys(DB.wf).forEach(k=>{
     const m=k.match(/^(.+)_(\d{4})-(\d{2})-(\d{2})$/);
     if(!m)return;
     const ddId=m[1], y=m[2], mo=m[3];
     if(!monthlyIds.has(ddId))return; // weekly keys also end in YYYY-MM-DD; leave alone
     const newKey=`${ddId}_${y}-${mo}`;
-    if(DB.wf[newKey])return; // newer key already wins
-    DB.wf[newKey]=DB.wf[k];
-    delete DB.wf[k];
-    migrated++;
+    if(DB.wf[newKey]){
+      // Current-format key already holds the canonical state — orphan is stale
+      delete DB.wf[k]; cleaned++;
+    } else {
+      DB.wf[newKey]=DB.wf[k];
+      delete DB.wf[k];
+      migrated++;
+    }
   });
-  DB._wfMonthlyMigrated=true;
-  if(migrated>0)dbSave();
+  DB._wfMonthlyMigrated=true; // kept for compatibility; logic no longer gated on it
+  if(migrated>0||cleaned>0)dbSave();
+  return {migrated,cleaned};
 }
 function toggleWfStep(ddId,step){
   if(!DB._isAdmin)return;
@@ -5460,6 +5468,9 @@ function setWfModalTab(casinoId,tab){
 function closeWfModal(){
   const ov=document.getElementById('wf-modal-ov');
   if(ov)ov.remove();
+  // Re-render the dashboard so workflow tracker percentages reflect any toggles
+  // made inside the modal. (toggleWfStep only re-renders the modal contents.)
+  if(typeof render==='function')render();
 }
 
 function rWfBoxes(){
