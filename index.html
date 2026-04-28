@@ -769,11 +769,13 @@ async function sbLoad(forceRender=false, forceUsers=false){
         _localUsers.forEach(lu=>{sbEmails.set(lu.email.toLowerCase(),lu);});
         DB._users=[...sbEmails.values()];
       }
-      // Preserve any local periods not yet synced to Supabase
+      // Preserve any local periods not yet synced to Supabase. Use the 24-period
+      // safety cap that matches _trimPeriodsRetention; the old 12-cap here was
+      // stale and would silently drop recent uploads.
       if(_localPeriods.length){
         const sbIds=new Set((DB.periods||[]).map(p=>p.id));
         const localOnly=_localPeriods.filter(p=>!sbIds.has(p.id));
-        if(localOnly.length) DB.periods=[...localOnly,...(DB.periods||[])].slice(0,12);
+        if(localOnly.length) DB.periods=[...localOnly,...(DB.periods||[])].slice(0,24);
       }
       // Fix 2: merge savedBids — union by id, local wins on id collision, newest-first, cap 30/key.
       // Protects submissions on this device from being silently dropped by stale remote blobs.
@@ -1606,7 +1608,12 @@ function rBidSheet(){
 }
 // ── DRAFT BID (all-in-one) ──
 function rDraftBid(){
-  const pa=DB.periods[S.cA]||DB.periods[0],pb=DB.periods[S.cB]||DB.periods[1];
+  // Defensive: never let pa/pb be undefined. With only 1 period (or none),
+  // fall through to a placeholder so the rest of the template doesn't crash on
+  // pb.lbl / pb.data. Also guard against S.cA / S.cB being out of bounds.
+  const _empty={lbl:'(no data)', data:{}};
+  const pa=DB.periods&&DB.periods.length?(DB.periods[S.cA]||DB.periods[0]||_empty):_empty;
+  const pb=DB.periods&&DB.periods.length?(DB.periods[S.cB]||DB.periods[1]||DB.periods[0]||_empty):_empty;
   let its=gI(S.casino.id,S.cat);
   its=applyFlt(its,'db');
   const _fmtP=(p,i,sel)=>{const n=Object.keys(p.data||{}).length;const lbl=(p.bid_type?p.bid_type+' – ':'')+p.lbl+(n>0?' ('+n+' items)':' (no data)');return`<option value="${i}"${i===sel?' selected':''}>${lbl}</option>`;};
