@@ -1835,7 +1835,13 @@ function selWk(n){S.selW.clear();WK.slice(-Math.min(n,WK.length)).forEach(w=>S.s
 
 function delPeriod(id){
   if(!DB._isAdmin)return;
-  DB.periods=(DB.periods||[]).filter(p=>p.id!==id);
+  // Remove only the FIRST period with this id, not all matches. Defensive in
+  // case any future id collision slips through — the user clicked one entry,
+  // they should only lose one entry.
+  if(!Array.isArray(DB.periods))return;
+  const idx=DB.periods.findIndex(p=>p&&p.id===id);
+  if(idx<0)return;
+  DB.periods.splice(idx,1);
   dbSave();
   render();
 }
@@ -3891,7 +3897,11 @@ function importPriceListMaster(file){
             pData[item]={cost,reg:(!isNaN(price)&&price>0)?price:null,desc,unit};
           }
         }
-        return{id:'pl'+idx, lbl:p.lbl, dt:p.lbl, data:pData, bid_type:p.bidType};
+        // Unique id per period (was 'pl'+idx, which collided across re-uploads —
+        // every first period would get id 'pl0' and delPeriod(id) would then remove
+        // both copies of any duplicated date). Include the upload timestamp so each
+        // run produces fresh ids; idx still keeps them distinguishable within one file.
+        return{id:'pl'+Date.now()+'_'+idx, lbl:p.lbl, dt:p.lbl, data:pData, bid_type:p.bidType};
       });
 
       // GUARDRAIL 1 — validation: reject the whole import if any parsed period
