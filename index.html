@@ -944,6 +944,23 @@ const _pdTs=p=>{
   return new Date(yr<100?(yr<50?2000+yr:1900+yr):yr,parseInt(m[1])-1,parseInt(m[2])).getTime();
 };
 const sortedPeriods=()=>[...(DB.periods||[])].sort((a,b)=>_pdTs(b)-_pdTs(a));
+// Date-based retention: keep periods whose dt is on/after the 1st of the previous
+// calendar month (PST). Periods with unparseable dt are kept (be conservative).
+// Safety cap of 24 prevents unbounded growth if many same-day periods exist.
+// Returns the number of periods removed.
+function _trimPeriodsRetention(){
+  if(!DB.periods||!DB.periods.length)return 0;
+  const now=getPST();
+  const y=now.getFullYear(), mo=now.getMonth();
+  const cutoff=new Date(y, mo-1, 1, 0, 0, 0, 0).getTime();
+  const before=DB.periods.length;
+  DB.periods=DB.periods.filter(p=>{
+    const ts=_pdTs(p);
+    return !ts || ts >= cutoff; // keep if no parseable date OR date is recent enough
+  });
+  if(DB.periods.length>24) DB.periods=sortedPeriods().slice(0,24);
+  return before-DB.periods.length;
+}
 const gH=(cid,cat,item)=>DB.bidH[`${cid}|${cat}|${item}`]||new Array(WK.length).fill(null);
 const sal=(id,msg,t='ok',ms=4000)=>{
   const el=document.getElementById(id);if(!el)return;
@@ -2294,7 +2311,7 @@ function hPL(inp){
         DB.periods=DB.periods.filter(p=>!(p.bid_type===bidType&&p.lbl===lbl));
         DB.periods.unshift({id:'p'+Date.now(),lbl,dt,data,bid_type:bidType});
         DB.periods=sortedPeriods();
-        if(DB.periods.length>12)DB.periods=DB.periods.slice(0,12);
+        _trimPeriodsRetention(); // date-based retention (last-month-onwards) replaces old 12-cap
         // Save locally first
         DB._savedAt=new Date().toISOString();
         try{localStorage.setItem('hkm_db',JSON.stringify(DB));}catch(e){}
@@ -3735,14 +3752,24 @@ function importPriceListMaster(file){
         return{id:'pl'+idx, lbl:p.lbl, dt:p.lbl, data:pData, bid_type:p.bidType};
       });
 
-      DB.periods=newPeriods;
+      // MERGE (not replace): upsert by bid_type+lbl so previous periods are preserved
+      // across re-uploads. This prevents the 'previous dates show no data' bug where
+      // a fresh master replaced everything in DB.periods.
+      const existing=Array.isArray(DB.periods)?DB.periods.slice():[];
+      newPeriods.forEach(np=>{
+        const idx=existing.findIndex(ep=>ep&&ep.bid_type===np.bid_type&&ep.lbl===np.lbl);
+        if(idx>=0) existing.splice(idx,1);
+      });
+      DB.periods=[...newPeriods,...existing];
       DB.periods=sortedPeriods();
+      const trimmed=_trimPeriodsRetention(); // keep last-month-onwards only
       S.cA=0; S.cB=Math.min(1,DB.periods.length-1);
       dbSave();hProg('pl2');
       const n=Object.keys(newPeriods[0]?.data||{}).length;
       render();
-      toast(`${usePeriods.length} periods, ${n} items imported. Draft Bid comparison updated.`,'ok','Price List Imported 📋',7000);
-      sal('pl2-al',`✓ Price List imported: ${usePeriods.length} periods, ${n} items in current period. Draft Bid comparison updated.`,'ok',8000);
+      const tail=trimmed>0?` (${trimmed} older period${trimmed!==1?'s':''} pruned)`:'';
+      toast(`${usePeriods.length} periods, ${n} items imported${tail}. Total in history: ${DB.periods.length}. Draft Bid comparison updated.`,'ok','Price List Imported 📋',7000);
+      sal('pl2-al',`✓ Price List imported: ${usePeriods.length} new period${usePeriods.length!==1?'s':''}, ${n} items. Total: ${DB.periods.length} period${DB.periods.length!==1?'s':''}${tail}. Draft Bid comparison updated.`,'ok',8000);
     }catch(err){hProg('pl2');toast('Import failed: '+err.message,'er','Import Error',0);sal('pl2-al','Error: '+err.message,'er',0);}
   };
   reader.readAsArrayBuffer(file);
@@ -5830,17 +5857,10 @@ function pruneOldData(){
   const cutoffISO=cutoff.toISOString();
   const cutoffTs=cutoff.getTime();
   let pruned=0;
-  // 1. Prune price list periods older than 15 months
-  if(DB.periods&&DB.periods.length){
-    const before=DB.periods.length;
-    DB.periods=DB.periods.filter(p=>{
-      try{
-        const d=new Date(p.dt.replace(/\./g,'/'));
-        return isNaN(d.getTime())||d>=cutoff;
-      }catch(e){return true;}
-    });
-    pruned+=before-DB.periods.length;
-  }
+  // 1. Prune price list periods using the new retention rule (last-month-onwards).
+  // Replaces the older 15-month cutoff so periods don't bloat the synced blob;
+  // shares logic with the upload-time trims so all paths agree.
+  pruned+=_trimPeriodsRetention();
   // 2. Prune alertsSent older than 15 months
   if(DB.alertsSent){
     Object.keys(DB.alertsSent).forEach(k=>{
