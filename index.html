@@ -3238,6 +3238,21 @@ function _bidEffStyle(p){
   if(s==='future') return{hdr:'background:#d9a020;',cell:'background:rgba(217,160,32,.13);'};
   return{hdr:'',cell:''};
 }
+// Display label for a saved-bid column. For monthly categories, format as
+// "MMM 'YY" (e.g. "MAY '26") so saved columns visually line up with the
+// imported monthly columns. Weekly categories keep the existing "M/DD - M/DD".
+function _bidColLabel(p, cat){
+  if(!p) return '';
+  const isMonthly=/^MTH_|^MONTHLY_/i.test(cat||'');
+  if(isMonthly && p.dt){
+    const d=new Date(p.dt+'T00:00:00');
+    if(!isNaN(d.getTime())){
+      const M=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+      return `${M[d.getMonth()]} '${String(d.getFullYear()).slice(-2)}`;
+    }
+  }
+  return p.lbl||'';
+}
 
 // rBidHistImported: shows full historical bid table from imported master files
 function rBidHistSaved(savedBids){
@@ -3259,7 +3274,7 @@ function rBidHistSaved(savedBids){
   h+='<th class="sth" style="width:28px;min-width:28px;text-align:right">No.</th>';
   h+='<th class="s1 sth" style="min-width:70px">HKM</th><th class="s2 sth" style="min-width:70px">Item #</th>';
   h+='<th class="s3 sth" style="min-width:210px">Description</th><th style="width:50px">UM</th>';
-  displayBids.forEach((p,i)=>{const st=_bidEffStyle(p);h+=`<th style="min-width:74px;${st.hdr}">${p.lbl}${i===0?' *':''}</th>`;});
+  displayBids.forEach((p,i)=>{const st=_bidEffStyle(p);const lbl=_bidColLabel(p,S.cat);h+=`<th style="min-width:74px;${st.hdr}">${lbl}${i===0?' *':''}</th>`;});
   h+='</tr></thead><tbody>';
   const pgKey='bh_'+S.casino.id+'_'+S.cat;
   const pgd=doPg(active,pgKey);
@@ -3327,10 +3342,12 @@ function rBidHistImported(impData,savedBids=[]){
   h+='<th class="s2 sth resizable-th" style="width:82px;min-width:82px">Item #</th>';
   h+='<th class="s3 sth resizable-th" style="width:220px;min-width:220px;max-width:220px">Description</th>';
   h+='<th style="width:50px;min-width:50px">UM</th>';
-  // Saved bid columns — colored by effective-through status, * on the most recent only
+  // Saved bid columns — colored by effective-through status, * on the most recent only.
+  // Monthly categories use "MMM 'YY" format to match imported columns; weekly uses "M/DD - M/DD".
   savedCols.forEach((p,i)=>{
     const st=_bidEffStyle(p);
-    h+=`<th style="width:74px;min-width:74px;${st.hdr}">${p.lbl}${i===0?' *':''}</th>`;
+    const lbl=_bidColLabel(p,S.cat);
+    h+=`<th style="width:74px;min-width:74px;${st.hdr}">${lbl}${i===0?' *':''}</th>`;
   });
   // Imported columns
   showCols.forEach((col,i)=>{
