@@ -970,19 +970,24 @@ function _trimPeriodsRetention(){
   return before-DB.periods.length;
 }
 // Sanity check on a parsed period's data: returns true if the keys look like real
-// HKM/item codes (mostly alphanumeric, length>=2). Catches the parser-misread bug
-// where rows[5] returned raw row indices like "10","11","12".
+// HKM/item codes. Rejects integer-shaped ("10","11"), decimal-shaped ("0.25","1.5"),
+// and Excel error markers ("#N/A","#REF!") — the three patterns that mean the parser
+// misread the file (read a Cost/Margin/MarkUp column instead of the Item column).
 function _periodLooksValid(period){
   if(!period||!period.data)return false;
   const keys=Object.keys(period.data);
   if(!keys.length)return false;
-  let numericish=0, hkmish=0;
+  let badish=0, hkmish=0;
   for(const k of keys){
-    if(/^\d+$/.test(k)) numericish++;
-    else if(k.length>=3 && /[A-Za-z]/.test(k)) hkmish++;
+    if(/^\d+(\.\d+)?$/.test(k)){badish++;continue;}      // pure integer or decimal
+    if(/^#[A-Z]+/.test(k)||k==='#N/A'){badish++;continue;} // Excel errors
+    // HKM-shaped: starts with a letter, mostly alnum/dash/underscore
+    if(/^[A-Za-z][A-Za-z0-9_./\-]*$/.test(k)&&k.length>=2){hkmish++;continue;}
   }
-  // Treat as corrupted if at least 50 keys are pure-numeric AND fewer than 5 are HKM-shaped
-  return !(numericish>=50 && hkmish<5);
+  // Reject if there are at least 10 bad-shaped keys AND they outnumber the HKM-shaped
+  // keys. Tuned so a noisy real-world period (a few decimals among hundreds of good
+  // codes) still passes, but a parser misread (most/all keys bad) is always caught.
+  return !(badish>=10 && badish>hkmish);
 }
 // Hard dedupe: keep one entry per (bid_type, lbl). When duplicates exist,
 // prefer the entry with more HKM-shaped keys (drops corrupted lookalikes).
@@ -3763,12 +3768,26 @@ function importPriceListMaster(file){
 
       const row0=rows[0]||[]; // Row 1: bid type labels (WEEKLY, MTH-VENE…)
       const row1=rows[1]||[]; // Row 2: date labels (Current, (4.1.26), …)
-      const row2=rows[2]||[]; // Row 3: Cost / Price / Item column headers
+      const row2=rows[2]||[]; // Row 3: column headers (Description, U/M, Item, Cost, Price, …)
+
+      // ── Detect column positions by header name (don't trust fixed indices).
+      // This makes the parser resilient to inserted/reordered columns in future
+      // versions of the master file — if a column shifts, we still find it by name.
+      const _hdrIdx=name=>row2.findIndex(h=>String(h||'').toLowerCase().trim()===name);
+      const itemCol=_hdrIdx('item');
+      const descCol=_hdrIdx('description');
+      const unitCol=_hdrIdx('u/m');
+      if(itemCol<0){
+        hProg('pl2');
+        const msg=`Could not find an "Item" column in the Price History sheet's row 3. Headers found: ${row2.filter(Boolean).slice(0,10).join(', ')}. Aborting — DB.periods is unchanged.`;
+        sal('pl2-al',msg,'er',0); toast(msg,'er','Header Not Found',0);
+        return;
+      }
 
       // ── Find all Cost column positions by scanning row2 for 'cost' ──
-      // Col 5 = Item (HKM code), Cost/Price pairs start at col 6
+      const firstCostScan=Math.max(itemCol+1,6); // Cost columns are always to the right of Item
       const periods=[];
-      for(let i=6;i<row2.length;i++){
+      for(let i=firstCostScan;i<row2.length;i++){
         const hdr=String(row2[i]||'').toLowerCase().trim();
         if(hdr!=='cost') continue;
 
@@ -3800,18 +3819,20 @@ function importPriceListMaster(file){
         for(let r=3;r<rows.length;r++){
           const row=rows[r];
           if(!row) continue;
-          const rawCode=row[5];
+          const rawCode=row[itemCol];          // detected Item column (was hardcoded col 5)
           if(rawCode==null) continue;
           const item=String(rawCode).trim();
-          // Skip non-item rows (fees, discounts, numeric-only codes)
+          // Skip non-item rows (fees, discounts, numeric-only codes, decimals, errors)
           if(!item||item.length<2) continue;
           if(/^0+$/.test(item)) continue;
+          if(/^\d+(\.\d+)?$/.test(item)) continue; // numeric values aren't HKM codes
+          if(/^#[A-Z]+/.test(item)||item==='#N/A') continue; // Excel error markers
           if(/delivery|discount|ssh|processing/i.test(item)) continue;
           const cost=parseFloat(row[p.costCol]);
           const price=parseFloat(row[p.priceCol]);
           if(!isNaN(cost)&&cost>0){
-            const desc=String(row[1]||'').trim();
-            const unit=String(row[2]||'').trim();
+            const desc=descCol>=0?String(row[descCol]||'').trim():'';
+            const unit=unitCol>=0?String(row[unitCol]||'').trim():'';
             pData[item]={cost,reg:(!isNaN(price)&&price>0)?price:null,desc,unit};
           }
         }
@@ -3831,13 +3852,22 @@ function importPriceListMaster(file){
         toast(msg,'er','Import Aborted',0);
         return;
       }
-      // GUARDRAIL 2 — preview confirm. Show the user what's about to land before
-      // we mutate the synced blob. Only triggers for master imports (not QBE one-offs).
+      // GUARDRAIL 2 — preview confirm. Show the user what's about to land + which
+      // columns the parser detected, so they can spot a mis-mapping before commit.
       const sampleHKMs=Object.keys(validNew[0]?.data||{}).slice(0,4).join(', ');
+      const sampleRow=Object.entries(validNew[0]?.data||{})[0]; // [hkm, {desc,unit,cost,reg}]
+      const sampleDesc=sampleRow?(sampleRow[1].desc||'(blank)').slice(0,40):'(none)';
+      const sampleUnit=sampleRow?(sampleRow[1].unit||'(blank)').slice(0,30):'(none)';
       const summary=`About to import ${validNew.length} period(s) into Price List History:\n\n`+
         validNew.slice(0,8).map(p=>`  • ${p.bid_type||'?'} — ${p.lbl} (${Object.keys(p.data||{}).length} items)`).join('\n')+
         (validNew.length>8?`\n  …and ${validNew.length-8} more`:'')+
-        `\n\nSample item codes from the first period: ${sampleHKMs}\n\n`+
+        `\n\nDetected columns:\n`+
+        `  • Item (HKM)  → column ${itemCol+1} (Excel col ${String.fromCharCode(65+itemCol)})\n`+
+        `  • Description → column ${descCol>=0?descCol+1:'NOT FOUND'}\n`+
+        `  • U/M         → column ${unitCol>=0?unitCol+1:'NOT FOUND'}\n\n`+
+        `Sample first row:\n`+
+        `  HKM: ${sampleRow?sampleRow[0]:'?'}   Desc: ${sampleDesc}   U/M: ${sampleUnit}\n\n`+
+        `Sample item codes: ${sampleHKMs}\n\n`+
         (droppedInvalid>0?`Note: ${droppedInvalid} corrupted period(s) were detected and skipped.\n\n`:'')+
         `OK to proceed? (Cancel keeps your current Price List History as-is.)`;
       if(!confirm(summary)){
