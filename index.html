@@ -1498,6 +1498,14 @@ function confirmSbRename(){
     const oldKey=cid+'|'+cat,newKey=cid+'|'+newCat;
     if(DB.items[oldKey]){DB.items[newKey]=DB.items[oldKey];delete DB.items[oldKey];}
     if(DB.impBH&&DB.impBH[oldKey]){DB.impBH[newKey]=DB.impBH[oldKey];delete DB.impBH[oldKey];}
+    // Move the timestamp too so the renamed key stays protected
+    if(DB._itemsTouched&&DB._itemsTouched[oldKey]!=null){
+      DB._itemsTouched[newKey]=DB._itemsTouched[oldKey];
+      delete DB._itemsTouched[oldKey];
+    } else if(DB.items[newKey]){
+      // Stamp it as freshly-touched-by-rename so a stale tab can't revive the old key
+      _touchItems(newKey);
+    }
     if(S.cat===cat)S.cat=newCat;
     dbSave();render();
   }
@@ -4388,7 +4396,10 @@ function confirmRowDelete(){
   const cid=parts[0],cat=parts[1];
 
   // 1. Remove from items list
-  if(DB.items[key]) DB.items[key]=DB.items[key].filter(it=>it.item!==item);
+  if(DB.items[key]){
+    DB.items[key]=DB.items[key].filter(it=>it.item!==item);
+    _touchItems(key); // protect this deletion from stale-tab push-back
+  }
 
   // 2. Remove from soft-delete list (cleanup — no longer needed)
   if(DB.delItems&&DB.delItems[key]){
