@@ -729,6 +729,15 @@ async function sbSync(){
           }).slice(0,30);
         });
         DB.savedBids=mergedSB;
+
+        // Items: per-key timestamped merge so a fresh casino-sheet upload on
+        // this device wins over a stale tab's older items list, and vice versa.
+        const itemsMerge=_mergeItemsByTimestamp(
+          existing.data.items, existing.data._itemsTouched,
+          DB.items, DB._itemsTouched
+        );
+        DB.items=itemsMerge.items;
+        DB._itemsTouched=itemsMerge.touched;
       }
     }catch(pullE){
       // Pre-push pull failed — push current local anyway; sbLoad poll will
@@ -826,10 +835,10 @@ async function sbLoad(forceRender=false, forceUsers=false){
           DB._users=data.data._users;
           localStorage.setItem('hkm_db',JSON.stringify(DB));
         }
-        // Always reconcile periods + tombstones via union — a stale tab whose
-        // _savedAt is newer than Supabase's must NOT get to keep its smaller
-        // periods set. Union-by-id (tombstones honored) means remote-only
-        // periods are added back without overwriting local-only ones.
+        // Always reconcile periods + items via union — a stale tab whose
+        // _savedAt is newer than Supabase's must NOT keep its smaller periods
+        // set OR its older items list. Union-by-id (tombstones honored) for
+        // periods; per-key timestamped merge for items.
         try{
           const remotePeriods=Array.isArray(data.data.periods)?data.data.periods:[];
           const localPeriods=Array.isArray(DB.periods)?DB.periods:[];
@@ -838,19 +847,38 @@ async function sbLoad(forceRender=false, forceUsers=false){
           remotePeriods.forEach(p=>{if(p&&p.id&&!tombs[p.id])byId.set(p.id,p);});
           localPeriods.forEach(p=>{if(p&&p.id&&!tombs[p.id])byId.set(p.id,p);});
           const newPeriods=[...byId.values()];
-          // Only update if the union actually adds something — avoids unnecessary
-          // localStorage writes and re-renders on every poll.
           const localIds=new Set(localPeriods.map(p=>p&&p.id));
           const addedSomething=newPeriods.some(p=>!localIds.has(p.id));
-          if(addedSomething){
-            DB.periods=newPeriods;
-            DB._deletedPeriods=tombs;
-            if(typeof _dedupePeriods==='function')_dedupePeriods();
-            if(typeof _trimPeriodsRetention==='function')_trimPeriodsRetention();
+
+          // Items merge always runs — even if periods are unchanged, items
+          // could have been updated remotely.
+          const itemsMerge=_mergeItemsByTimestamp(
+            data.data.items, data.data._itemsTouched,
+            DB.items, DB._itemsTouched
+          );
+          // Detect if items merge changed anything for any key
+          let itemsChanged=false;
+          const allItemKeys=new Set([...Object.keys(DB.items||{}),...Object.keys(itemsMerge.items||{})]);
+          for(const k of allItemKeys){
+            const a=(DB.items||{})[k]||[];
+            const b=(itemsMerge.items||{})[k]||[];
+            if(a!==b){itemsChanged=true;break;}
+          }
+          if(addedSomething||itemsChanged){
+            if(addedSomething){
+              DB.periods=newPeriods;
+              DB._deletedPeriods=tombs;
+              if(typeof _dedupePeriods==='function')_dedupePeriods();
+              if(typeof _trimPeriodsRetention==='function')_trimPeriodsRetention();
+            }
+            if(itemsChanged){
+              DB.items=itemsMerge.items;
+              DB._itemsTouched=itemsMerge.touched;
+            }
             localStorage.setItem('hkm_db',JSON.stringify(DB));
             if(forceRender)render();
           }
-        }catch(e){console.warn('skip-path period reconcile failed:',e&&e.message);}
+        }catch(e){console.warn('skip-path reconcile failed:',e&&e.message);}
         _sbReady=true;
         return;
       }
@@ -861,6 +889,9 @@ async function sbLoad(forceRender=false, forceUsers=false){
       const _localPeriods=DB.periods?[...DB.periods]:[];
       const _localNewB=DB.newB&&Object.keys(DB.newB).length>0?{...DB.newB}:{};
       const _localAlertsSent=DB.alertsSent?{...DB.alertsSent}:{};
+      // Snapshot items + per-key timestamps so we can merge after Object.assign
+      const _localItems=DB.items?{...DB.items}:{};
+      const _localItemsTouched=DB._itemsTouched?{...DB._itemsTouched}:{};
       // Fix 2: snapshot savedBids so remote can't silently delete a submission the local device made
       const _localSavedBids=DB.savedBids?JSON.parse(JSON.stringify(DB.savedBids)):null;
       // Pending-sync queue is strictly per-device — do not let remote clobber
@@ -893,6 +924,14 @@ async function sbLoad(forceRender=false, forceUsers=false){
       }
       // Filter out tombstoned periods from the merged set (in case remote still has them)
       DB.periods=(DB.periods||[]).filter(p=>!p||!_tombstones[p.id]);
+      // Items: per-key timestamped merge so a fresh casino-sheet upload here
+      // doesn't get overwritten by a stale remote items list (and vice versa).
+      const _itemsMerge=_mergeItemsByTimestamp(
+        DB.items, DB._itemsTouched,
+        _localItems, _localItemsTouched
+      );
+      DB.items=_itemsMerge.items;
+      DB._itemsTouched=_itemsMerge.touched;
       // Fix 2: merge savedBids — union by id, local wins on id collision, newest-first, cap 30/key.
       // Protects submissions on this device from being silently dropped by stale remote blobs.
       if(_localSavedBids){
@@ -1015,6 +1054,33 @@ const lpH=(price,lpDate)=>{
   return`<span style="background:${s.bg};color:${s.color};padding:1px 6px;border-radius:4px;font-weight:700;display:inline-block;font-size:10.5px" title="${s.days} day${s.days!==1?'s':''} ago">${txt}</span>`;
 };
 const gI=(cid,cat)=>DB.items[`${cid}|${cat}`]||[];
+// Mark a (casino|category) items list as freshly updated. Sync uses these
+// timestamps to decide which side wins when both local and remote disagree
+// on the same key, preventing a stale tab from silently overwriting a
+// recent casino-sheet upload.
+function _touchItems(key){if(!DB._itemsTouched)DB._itemsTouched={};DB._itemsTouched[key]=Date.now();}
+// Per-key timestamped merge: when both sides have data for the same
+// (casino|category) key, the side with the newer _itemsTouched wins.
+// If neither has a timestamp, local wins (current device is canonical
+// for unmarked legacy data).
+function _mergeItemsByTimestamp(remoteItems, remoteTouched, localItems, localTouched){
+  remoteItems=remoteItems||{};remoteTouched=remoteTouched||{};
+  localItems=localItems||{};localTouched=localTouched||{};
+  const allKeys=new Set([...Object.keys(remoteItems),...Object.keys(localItems)]);
+  const items={},touched={};
+  allKeys.forEach(k=>{
+    const r=Array.isArray(remoteItems[k])?remoteItems[k]:null;
+    const l=Array.isArray(localItems[k])?localItems[k]:null;
+    const rT=remoteTouched[k]||0, lT=localTouched[k]||0;
+    if(r&&!l){items[k]=r;if(rT)touched[k]=rT;}
+    else if(l&&!r){items[k]=l;if(lT)touched[k]=lT;}
+    else if(r&&l){
+      if(rT>lT){items[k]=r;touched[k]=rT;}
+      else{items[k]=l;if(lT||rT)touched[k]=Math.max(lT,rT);}
+    }
+  });
+  return{items,touched};
+}
 const gL=(cid,item,hkm)=>{if(hkm&&hkm.trim()){const v=DB.lps[`${cid}|${hkm.trim()}`];if(v&&Object.keys(v).length)return v;}return DB.lps[`${cid}|${item}`]||{};};
 // Build HKM code → best description map for a given casino.
 // Priority (authoritative = HKM's own records first):
@@ -2739,6 +2805,7 @@ function hCasino(inp){
       data.forEach(it=>{if(!it.hkm && hmap[it.item])it.hkm=hmap[it.item];});
       // FULL REPLACEMENT — casino's current list is the source of truth for item order and membership
       DB.items[`${cid}|${cat}`]=data;
+      _touchItems(`${cid}|${cat}`); // mark fresh so sync won't revert
       // Clear soft-deleted rows — re-upload is a full refresh so stale deletions would hide valid items
       if(DB.delItems&&DB.delItems[`${cid}|${cat}`]) delete DB.delItems[`${cid}|${cat}`];
       dbSave();hProg('cs');
@@ -2961,6 +3028,7 @@ function hAddBid(inp){
       const hmap={};old.forEach(it=>{if(it.hkm)hmap[it.item]=it.hkm;});
       data.forEach(it=>{if(!it.hkm && hmap[it.item])it.hkm=hmap[it.item];});
       DB.items[`${cid}|${cat}`]=data;
+      _touchItems(`${cid}|${cat}`); // mark fresh so sync won't revert
       // Clear soft-deleted rows — re-upload is a full refresh so stale deletions would hide valid items
       if(DB.delItems&&DB.delItems[`${cid}|${cat}`]) delete DB.delItems[`${cid}|${cat}`];
       dbSave();hProg('ab');
@@ -3952,6 +4020,7 @@ function importBidMaster(file){
         }
 
         DB.items[catKey]=newItems;
+        _touchItems(catKey); // mark fresh so sync won't revert
         DB.impBH[catKey]={cols,rows:rowsObj};
 
         const casino=DB.casinos.find(c=>c.id===casinoId);
