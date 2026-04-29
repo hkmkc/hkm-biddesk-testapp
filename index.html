@@ -132,7 +132,10 @@ body.sb-collapsed #sb-collapse-btn svg{transform:rotate(180deg)}
 .a-in{background:#e6f1fb;border:1px solid #b5d4f4;color:#0c447c}
 .a-er{background:var(--rl);border:1px solid #f7c1c1;color:var(--red)}
 .tw{overflow-x:auto;border:1px solid var(--bd);border-radius:var(--r);background:var(--bg2)}
-.twh{max-height:calc(100vh - 280px);overflow-y:auto}
+/* Fixed height (was max-height) so the horizontal scrollbar always sits at the
+   same bottom position — directly above the pagination footer — instead of
+   floating up when content is short. Easy-to-find x-scroll bar. */
+.twh{height:calc(100vh - 280px);overflow-y:auto}
 table{border-collapse:collapse;font-size:12px;width:100%}
 thead th{background:var(--navy);color:#fff;padding:7px 9px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:700;position:sticky;top:0;z-index:3}
 .tw thead{position:sticky;top:0;z-index:3}
@@ -4139,17 +4142,14 @@ function onFltQ(el,key){
 }
 function rFltBar(scope,rightSlot=''){
   const flt=S.flt||{};
-  const sz=S.pgSz||50;
-  const szOpts=[25,50,100,999].map(n=>`<option value="${n}"${sz===n?' selected':''}>${n===999?'All':n}</option>`).join('');
+  // Rows-per-page selector lives only in the footer pagination bar (rPgBar)
+  // — keeping a single source of control to avoid duplicate UI.
   return`<div class="fbar" style="margin-bottom:0">
     <span class="ftag${flt.hkmOnly?' on':''}" onclick="S.flt.hkmOnly=!S.flt.hkmOnly;S.pg={};render()">HKM Only</span>
     <span class="ftag${flt.pricedOnly?' on':''}" onclick="S.flt.pricedOnly=!S.flt.pricedOnly;S.pg={};render()">Priced Only</span>
     <input class="fsearch" data-fk="q" placeholder="Search HKM / Item# / Desc…" value="${flt.q||''}" oninput="onFltQ(this,'q')">
     ${(flt.hkmOnly||flt.pricedOnly||flt.q)?'<span class="ftag" onclick="S.flt={};S.pg={};render()" style="color:var(--red);border-color:#f7c1c1">✕ Clear</span>':''}
-    <span style="margin-left:auto;display:flex;align-items:center;gap:5px;font-size:11px;color:var(--tx3)">Rows
-      <select style="font-size:11px;padding:2px 4px;border:1px solid var(--bd);border-radius:4px;background:var(--bg2);color:var(--tx1);cursor:pointer" onchange="S.pgSz=+this.value===999?99999:+this.value;S.pg={};render()">${szOpts}</select>
-    </span>
-    ${rightSlot?`<div style="margin-left:8px">${rightSlot}</div>`:''}
+    ${rightSlot?`<div style="margin-left:auto">${rightSlot}</div>`:''}
   </div>`;
 }
 function _rPHBtn(){
