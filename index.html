@@ -665,10 +665,64 @@ function dbSave(){
 // Push full DB to a single Supabase row (key='hkm_main').
 // Returns true on confirmed success, false on any failure.
 // Also updates _lastKnownSbTs so the background poll doesn't re-download our own write.
+//
+// Pull-then-union semantics for periods + savedBids: before every push we pull
+// the remote state and union the additive collections (periods, savedBids) by
+// id. This prevents a stale tab — one whose local data is older than what's
+// actually in Supabase — from wiping recent uploads when its dbSave fires.
+// Local entries win on id collisions (so user edits stick), but no remote-only
+// entries are ever lost in the push.
 let _lastKnownSbTs=null; // tracks the remote updated_at we last saw
 async function sbSync(){
   if(!_sbReady){console.warn('Supabase push blocked — data not yet confirmed from server.');return false;}
   try{
+    // ── PULL-THEN-UNION ──
+    try{
+      const {data:existing, error:pullErr}=await SB.from('app_data').select('data').eq('key','hkm_main').single();
+      if(!pullErr && existing && existing.data){
+        // Tombstones: union of local + remote so deletions propagate across devices
+        const tombstones=Object.assign({},
+          existing.data._deletedPeriods||{},
+          DB._deletedPeriods||{}
+        );
+        DB._deletedPeriods=tombstones;
+        // Periods: union by id, local wins on collision; tombstoned ids excluded;
+        // then dedupe + retention
+        const remotePeriods=Array.isArray(existing.data.periods)?existing.data.periods:[];
+        const localPeriods=Array.isArray(DB.periods)?DB.periods:[];
+        const byId=new Map();
+        remotePeriods.forEach(p=>{if(p&&p.id&&!tombstones[p.id])byId.set(p.id,p);});
+        localPeriods.forEach(p=>{if(p&&p.id&&!tombstones[p.id])byId.set(p.id,p);}); // local wins
+        DB.periods=[...byId.values()];
+        if(typeof _dedupePeriods==='function')_dedupePeriods();
+        if(typeof _trimPeriodsRetention==='function')_trimPeriodsRetention();
+
+        // savedBids: union per casino|cat key by id (matches sbLoad merge logic)
+        const remoteSB=existing.data.savedBids||{};
+        const localSB=DB.savedBids||{};
+        const allKeys=new Set([...Object.keys(remoteSB),...Object.keys(localSB)]);
+        const mergedSB={};
+        allKeys.forEach(k=>{
+          const r=Array.isArray(remoteSB[k])?remoteSB[k]:[];
+          const l=Array.isArray(localSB[k])?localSB[k]:[];
+          const sbIdMap=new Map();
+          r.forEach(p=>{if(p&&p.id)sbIdMap.set(p.id,p);});
+          l.forEach(p=>{if(p&&p.id)sbIdMap.set(p.id,p);}); // local wins
+          mergedSB[k]=[...sbIdMap.values()].sort((a,b)=>{
+            const ta=parseInt((a.id||'').replace(/^sb/,''),10)||0;
+            const tb=parseInt((b.id||'').replace(/^sb/,''),10)||0;
+            return tb-ta;
+          }).slice(0,30);
+        });
+        DB.savedBids=mergedSB;
+      }
+    }catch(pullE){
+      // Pre-push pull failed — push current local anyway; sbLoad poll will
+      // reconcile on next cycle. Log but don't block.
+      console.warn('Pre-push pull failed; pushing local state as-is:',pullE&&pullE.message);
+    }
+
+    // ── PUSH ──
     const ts=new Date().toISOString();
     const toSave=Object.assign({},DB);
     delete toSave._isAdmin;delete toSave._currentUser;delete toSave._openC;
@@ -677,6 +731,8 @@ async function sbSync(){
     const {error}=await SB.from('app_data').upsert({key:'hkm_main', data: toSave, updated_at: ts}, {onConflict:'key'});
     if(error) throw error;
     _lastKnownSbTs=ts; // we wrote this — poll can skip downloading it back
+    // Persist the unioned state to localStorage so a refresh sees the merged view
+    try{localStorage.setItem('hkm_db',JSON.stringify(DB));}catch(e){}
     return true;
   }catch(e){console.warn('Supabase sync failed:',e.message);return false;}
 }
@@ -787,11 +843,17 @@ async function sbLoad(forceRender=false, forceUsers=false){
       // Preserve any local periods not yet synced to Supabase. Use the 24-period
       // safety cap that matches _trimPeriodsRetention; the old 12-cap here was
       // stale and would silently drop recent uploads.
+      // Honor tombstones — periods the user explicitly deleted should NOT come
+      // back from remote (DB._deletedPeriods is the union of local + remote
+      // tombstones at this point, since Object.assign above merged them in).
+      const _tombstones=(DB._deletedPeriods||{});
       if(_localPeriods.length){
         const sbIds=new Set((DB.periods||[]).map(p=>p.id));
-        const localOnly=_localPeriods.filter(p=>!sbIds.has(p.id));
+        const localOnly=_localPeriods.filter(p=>!sbIds.has(p.id)&&!_tombstones[p.id]);
         if(localOnly.length) DB.periods=[...localOnly,...(DB.periods||[])].slice(0,24);
       }
+      // Filter out tombstoned periods from the merged set (in case remote still has them)
+      DB.periods=(DB.periods||[]).filter(p=>!p||!_tombstones[p.id]);
       // Fix 2: merge savedBids — union by id, local wins on id collision, newest-first, cap 30/key.
       // Protects submissions on this device from being silently dropped by stale remote blobs.
       if(_localSavedBids){
@@ -1857,6 +1919,11 @@ function delPeriod(id){
   const idx=DB.periods.findIndex(p=>p&&p.id===id);
   if(idx<0)return;
   DB.periods.splice(idx,1);
+  // Tombstone: record the deletion so the pull-then-union in sbSync doesn't
+  // bring the period back from remote on the next sync. Cleaned up after 7
+  // days by pruneOldData.
+  if(!DB._deletedPeriods)DB._deletedPeriods={};
+  DB._deletedPeriods[id]=Date.now();
   dbSave();
   render();
 }
@@ -6075,6 +6142,15 @@ function pruneOldData(){
   // Replaces the older 15-month cutoff so periods don't bloat the synced blob;
   // shares logic with the upload-time trims so all paths agree.
   pruned+=_trimPeriodsRetention();
+  // 1b. Prune period tombstones older than 7 days (kept long enough that any
+  // stale tab will have synced and seen the deletion before we forget it).
+  if(DB._deletedPeriods){
+    const tombCutoff=Date.now()-7*86400000;
+    Object.keys(DB._deletedPeriods).forEach(id=>{
+      if(DB._deletedPeriods[id]<tombCutoff){delete DB._deletedPeriods[id];pruned++;}
+    });
+    if(!Object.keys(DB._deletedPeriods).length)delete DB._deletedPeriods;
+  }
   // 2. Prune alertsSent older than 15 months
   if(DB.alertsSent){
     Object.keys(DB.alertsSent).forEach(k=>{
