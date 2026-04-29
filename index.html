@@ -101,11 +101,17 @@ body.sb-collapsed #sb-collapse-btn svg{transform:rotate(180deg)}
 .sb-add:hover{color:rgba(255,255,255,.65);background:rgba(255,255,255,.06)}
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fff}
 #main-content{flex:1;padding:22px;overflow-y:auto;overflow-x:hidden}
-#app-footer{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:6px 22px;border-top:1.5px solid var(--bd);background:var(--bg2);font-size:11px;color:var(--tx2);gap:12px;flex-wrap:nowrap;height:40px;overflow:hidden}
-#app-footer .pgbar-l,.ph-modal-pg .pgbar-l{display:flex;align-items:center;gap:6px;white-space:nowrap}
-#app-footer .pgbar-r,.ph-modal-pg .pgbar-r{display:flex;align-items:center;gap:3px;white-space:nowrap}
+/* Footer is now a 2-row stack: optional horizontal-scroll proxy on top,
+   pagination/rows controls on the bottom. The proxy row only takes height
+   when a wide table is active (display:none otherwise). */
+#app-footer{flex-shrink:0;display:flex;flex-direction:column;border-top:1.5px solid var(--bd);background:var(--bg2);font-size:11px;color:var(--tx2)}
+#app-footer-xscroll{display:none;flex-shrink:0;overflow-x:auto;overflow-y:hidden;height:14px;background:var(--bg2);border-bottom:1px solid var(--bd)}
+#app-footer-xscroll>div{height:1px}
+#app-footer-row{flex:1;display:flex;align-items:center;justify-content:space-between;padding:6px 22px;gap:12px;flex-wrap:nowrap;height:40px;overflow:hidden}
+#app-footer .pgbar-l,#app-footer-row .pgbar-l,.ph-modal-pg .pgbar-l{display:flex;align-items:center;gap:6px;white-space:nowrap}
+#app-footer .pgbar-r,#app-footer-row .pgbar-r,.ph-modal-pg .pgbar-r{display:flex;align-items:center;gap:3px;white-space:nowrap}
 .ph-modal-pg .pgbar-l span,.ph-modal-pg .pgbar-r{white-space:nowrap}
-#app-footer .app-brand{font-size:10px;color:var(--tx3);white-space:nowrap;margin-left:auto}
+#app-footer .app-brand,#app-footer-row .app-brand{font-size:10px;color:var(--tx3);white-space:nowrap;margin-left:auto}
 .btn{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:var(--r);border:1px solid var(--bd2);cursor:pointer;font-size:12px;font-weight:700;background:var(--bg2);color:var(--tx);transition:.15s;white-space:nowrap;font-family:inherit}
 .btn:hover{background:var(--bg3)}
 .btn-nv{background:var(--navy);color:#fff;border-color:var(--navy)}.btn-nv:hover{background:var(--navy2)}
@@ -565,7 +571,6 @@ tr:hover .del-row{opacity:1}
   </div>
   <div id="main">
     <div id="main-content"></div>
-    <div id="tw-xscroll-bar" style="display:none;flex-shrink:0;overflow-x:auto;overflow-y:hidden;height:14px;background:var(--bg2);border-top:1px solid var(--bd)"><div id="tw-xscroll-inner" style="height:1px"></div></div>
     <div id="app-footer"></div>
   </div>
 </div>
@@ -821,6 +826,31 @@ async function sbLoad(forceRender=false, forceUsers=false){
           DB._users=data.data._users;
           localStorage.setItem('hkm_db',JSON.stringify(DB));
         }
+        // Always reconcile periods + tombstones via union — a stale tab whose
+        // _savedAt is newer than Supabase's must NOT get to keep its smaller
+        // periods set. Union-by-id (tombstones honored) means remote-only
+        // periods are added back without overwriting local-only ones.
+        try{
+          const remotePeriods=Array.isArray(data.data.periods)?data.data.periods:[];
+          const localPeriods=Array.isArray(DB.periods)?DB.periods:[];
+          const tombs=Object.assign({}, data.data._deletedPeriods||{}, DB._deletedPeriods||{});
+          const byId=new Map();
+          remotePeriods.forEach(p=>{if(p&&p.id&&!tombs[p.id])byId.set(p.id,p);});
+          localPeriods.forEach(p=>{if(p&&p.id&&!tombs[p.id])byId.set(p.id,p);});
+          const newPeriods=[...byId.values()];
+          // Only update if the union actually adds something — avoids unnecessary
+          // localStorage writes and re-renders on every poll.
+          const localIds=new Set(localPeriods.map(p=>p&&p.id));
+          const addedSomething=newPeriods.some(p=>!localIds.has(p.id));
+          if(addedSomething){
+            DB.periods=newPeriods;
+            DB._deletedPeriods=tombs;
+            if(typeof _dedupePeriods==='function')_dedupePeriods();
+            if(typeof _trimPeriodsRetention==='function')_trimPeriodsRetention();
+            localStorage.setItem('hkm_db',JSON.stringify(DB));
+            if(forceRender)render();
+          }
+        }catch(e){console.warn('skip-path period reconcile failed:',e&&e.message);}
         _sbReady=true;
         return;
       }
@@ -1196,19 +1226,26 @@ function render(){
 }
 
 // ── HORIZONTAL SCROLL PROXY ──────────────────────────────────────
-// Mirrors a wide table's horizontal scroll onto a sticky strip directly above
-// the page footer, so the user can always find the x-scroll bar at the same
-// place — never has to hunt for it inside the table area.
+// Mirrors a wide table's horizontal scroll onto a strip in the page footer
+// (#app-footer-xscroll), so the user always finds the x-scroll bar at the
+// same place — inside the footer, never hunting inside the table area.
+// Picks whichever element in #main-content overflows horizontally the most;
+// works for any table layout (Draft Bid, Bid Price History, Price List History).
 let _xScrollUnbinder=null;
 function _setupXScrollProxy(){
-  const bar=document.getElementById('tw-xscroll-bar');
-  const inner=document.getElementById('tw-xscroll-inner');
+  const bar=document.getElementById('app-footer-xscroll');
+  const inner=document.getElementById('app-footer-xscroll-inner');
   if(!bar||!inner)return;
   // Tear down any previous binding before re-wiring
   if(_xScrollUnbinder){_xScrollUnbinder();_xScrollUnbinder=null;}
-  // Find the active wide table — the .twh element currently visible in main-content
-  const tw=document.querySelector('#main-content .twh');
-  if(!tw||tw.scrollWidth<=tw.clientWidth+1){
+  // Find the table element with the largest horizontal overflow currently visible.
+  // Looks at all .tw / .twh elements in main-content (covers all tab layouts).
+  let tw=null, maxOverflow=0;
+  document.querySelectorAll('#main-content .tw, #main-content .twh').forEach(el=>{
+    const overflow=el.scrollWidth - el.clientWidth;
+    if(overflow>maxOverflow){maxOverflow=overflow;tw=el;}
+  });
+  if(!tw||maxOverflow<=1){
     bar.style.display='none';
     return;
   }
@@ -4140,10 +4177,16 @@ function _rPgControls(pgd,key){
 }
 function rAppFooter(){
   const brand='<span class="app-brand">HKM BidDesk \u00b7 Hong Kong Market</span>';
+  // Top row: horizontal-scroll proxy (hidden until a wide table is detected
+  // by _setupXScrollProxy). Bottom row: pagination + brand.
+  const xscrollRow='<div id="app-footer-xscroll"><div id="app-footer-xscroll-inner"></div></div>';
+  let bottomRow;
   if(_footerPg&&_footerPg.total>0){
-    return _rPgControls(_footerPg,_footerPg.key)+brand;
+    bottomRow='<div id="app-footer-row">'+_rPgControls(_footerPg,_footerPg.key)+brand+'</div>';
+  } else {
+    bottomRow='<div id="app-footer-row"><div></div>'+brand+'</div>';
   }
-  return`<div></div>${brand}`;
+  return xscrollRow+bottomRow;
 }
 
 // ── Filters ──
