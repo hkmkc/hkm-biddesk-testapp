@@ -143,10 +143,10 @@ body.sb-collapsed #sb-collapse-btn svg{transform:rotate(180deg)}
    The native vertical scrollbar inside the table is preserved. */
 .tw::-webkit-scrollbar:horizontal{display:none}
 .tw{scrollbar-width:thin}
-/* Fixed height (was max-height) so the horizontal scrollbar always sits at the
-   same bottom position — directly above the pagination footer — instead of
-   floating up when content is short. Easy-to-find x-scroll bar. */
-.twh{height:calc(100vh - 280px);overflow-y:auto}
+/* max-height: table shrinks to fit its content (no large empty space below
+   short pages). The horizontal scrollbar lives in #app-footer-xscroll, not
+   inside the table, so we no longer need a fixed height to keep it aligned. */
+.twh{max-height:calc(100vh - 280px);overflow-y:auto}
 table{border-collapse:collapse;font-size:12px;width:100%}
 thead th{background:var(--navy);color:#fff;padding:7px 9px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:700;position:sticky;top:0;z-index:3}
 .tw thead{position:sticky;top:0;z-index:3}
@@ -965,7 +965,7 @@ const S={
   bTab:'draftbid',uTab:'qbe',plTab:'hist',
   selW:new Set(WK.slice(-8).map(w=>w.id)),
   wf:'all',cA:0,cB:1,wkDropOpen:false,
-  pg:{},pgSz:50,flt:{hkmOnly:false,pricedOnly:false,q:''},
+  pg:{},pgSz:10,flt:{hkmOnly:false,pricedOnly:false,q:''},
   ovCasino:null,
 };
 
@@ -1266,7 +1266,7 @@ function _setupXScrollProxy(){
 }
 // Re-evaluate when window size changes (table content width may change)
 window.addEventListener('resize',()=>{requestAnimationFrame(_setupXScrollProxy);});
-function nav(v,o={}){const viewChanged=S.view!==v;Object.assign(S,{view:v},...[o]);if(viewChanged){S.pgSz=S.pgSz||50;S.pg={};}updateHash();render();}
+function nav(v,o={}){const viewChanged=S.view!==v;Object.assign(S,{view:v},...[o]);if(viewChanged){S.pgSz=S.pgSz||10;S.pg={};}updateHash();render();}
 
 function updateHash(){
   let h='dashboard';
@@ -4134,7 +4134,7 @@ function importPriceListMaster(file){
 // ── Pagination ──
 let _footerPg=null; // stores current page's pagination data for the footer
 function doPg(items, key){
-  const page=S.pg[key]||0, sz=S.pgSz||50;
+  const page=S.pg[key]||0, sz=S.pgSz||10;
   const total=items.length;
   const start=page*sz, end=Math.min(start+sz,total);
   const pgd={items:items.slice(start,end),total,page,pgSz:sz,start,end,key};
