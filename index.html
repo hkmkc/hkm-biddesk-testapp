@@ -132,6 +132,11 @@ body.sb-collapsed #sb-collapse-btn svg{transform:rotate(180deg)}
 .a-in{background:#e6f1fb;border:1px solid #b5d4f4;color:#0c447c}
 .a-er{background:var(--rl);border:1px solid #f7c1c1;color:var(--red)}
 .tw{overflow-x:auto;border:1px solid var(--bd);border-radius:var(--r);background:var(--bg2)}
+/* Hide the table's own horizontal scrollbar — it's mirrored on a sticky strip
+   above the app footer (#tw-xscroll-bar) that's wired up by _setupXScrollProxy.
+   The native vertical scrollbar inside the table is preserved. */
+.tw::-webkit-scrollbar:horizontal{display:none}
+.tw{scrollbar-width:thin}
 /* Fixed height (was max-height) so the horizontal scrollbar always sits at the
    same bottom position — directly above the pagination footer — instead of
    floating up when content is short. Easy-to-find x-scroll bar. */
@@ -560,6 +565,7 @@ tr:hover .del-row{opacity:1}
   </div>
   <div id="main">
     <div id="main-content"></div>
+    <div id="tw-xscroll-bar" style="display:none;flex-shrink:0;overflow-x:auto;overflow-y:hidden;height:14px;background:var(--bg2);border-top:1px solid var(--bd)"><div id="tw-xscroll-inner" style="height:1px"></div></div>
     <div id="app-footer"></div>
   </div>
 </div>
@@ -1185,8 +1191,44 @@ function render(){
   requestAnimationFrame(()=>{
     const st=el.querySelector('.sticky-tabs');
     document.documentElement.style.setProperty('--sticky-tabs-h', st?(st.offsetHeight+1)+'px':'0px');
+    _setupXScrollProxy();
   });
 }
+
+// ── HORIZONTAL SCROLL PROXY ──────────────────────────────────────
+// Mirrors a wide table's horizontal scroll onto a sticky strip directly above
+// the page footer, so the user can always find the x-scroll bar at the same
+// place — never has to hunt for it inside the table area.
+let _xScrollUnbinder=null;
+function _setupXScrollProxy(){
+  const bar=document.getElementById('tw-xscroll-bar');
+  const inner=document.getElementById('tw-xscroll-inner');
+  if(!bar||!inner)return;
+  // Tear down any previous binding before re-wiring
+  if(_xScrollUnbinder){_xScrollUnbinder();_xScrollUnbinder=null;}
+  // Find the active wide table — the .twh element currently visible in main-content
+  const tw=document.querySelector('#main-content .twh');
+  if(!tw||tw.scrollWidth<=tw.clientWidth+1){
+    bar.style.display='none';
+    return;
+  }
+  // Resize proxy inner to match the table's content width and show the strip
+  inner.style.width=tw.scrollWidth+'px';
+  bar.style.display='block';
+  bar.scrollLeft=tw.scrollLeft;
+  // Sync scrolls in both directions, with re-entrancy guard
+  let lock=false;
+  const onTwScroll=()=>{if(lock)return;lock=true;bar.scrollLeft=tw.scrollLeft;lock=false;};
+  const onBarScroll=()=>{if(lock)return;lock=true;tw.scrollLeft=bar.scrollLeft;lock=false;};
+  tw.addEventListener('scroll',onTwScroll,{passive:true});
+  bar.addEventListener('scroll',onBarScroll,{passive:true});
+  _xScrollUnbinder=()=>{
+    tw.removeEventListener('scroll',onTwScroll);
+    bar.removeEventListener('scroll',onBarScroll);
+  };
+}
+// Re-evaluate when window size changes (table content width may change)
+window.addEventListener('resize',()=>{requestAnimationFrame(_setupXScrollProxy);});
 function nav(v,o={}){const viewChanged=S.view!==v;Object.assign(S,{view:v},...[o]);if(viewChanged){S.pgSz=S.pgSz||50;S.pg={};}updateHash();render();}
 
 function updateHash(){
