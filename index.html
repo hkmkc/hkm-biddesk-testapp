@@ -102,9 +102,15 @@ body.sb-collapsed #sb-collapse-btn svg{transform:rotate(180deg)}
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fff}
 #main-content{flex:1;padding:22px;overflow-y:auto;overflow-x:hidden}
 /* Claude.ai helper — floating button + slide-out menu */
-#claude-fab{position:fixed;right:20px;bottom:60px;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 100%);color:#fff;display:flex;align-items:center;justify-content:center;cursor:grab;box-shadow:0 4px 16px rgba(27,92,158,.4);z-index:500;transition:box-shadow .15s,transform .15s;border:2px solid var(--gold);user-select:none;-webkit-user-select:none;touch-action:none}
+#claude-fab{position:fixed;right:20px;bottom:60px;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 100%);color:#fff;display:flex;align-items:center;justify-content:center;cursor:grab;box-shadow:0 4px 16px rgba(27,92,158,.4);z-index:500;transition:width .18s ease,height .18s ease,border-radius .18s ease,box-shadow .15s;border:2px solid var(--gold);user-select:none;-webkit-user-select:none;touch-action:none}
 #claude-fab:active{cursor:grabbing}
 #claude-fab:hover{box-shadow:0 6px 22px rgba(27,92,158,.55)}
+/* Collapsed (snap-to-edge) state: thin vertical handle stuck to viewport edge.
+   Border on the visible-edge sides only; flat against the screen edge. */
+#claude-fab.collapsed{width:16px;height:72px;border-radius:0;background:var(--navy);box-shadow:-2px 0 8px rgba(0,0,0,.18)}
+#claude-fab.collapsed.right-edge{border-radius:8px 0 0 8px;border-right-width:0;box-shadow:-3px 0 10px rgba(0,0,0,.2)}
+#claude-fab.collapsed.left-edge{border-radius:0 8px 8px 0;border-left-width:0;box-shadow:3px 0 10px rgba(0,0,0,.2)}
+#claude-fab.collapsed svg{width:11px;height:11px}
 #claude-menu{display:none;position:fixed;right:20px;bottom:120px;width:340px;max-width:calc(100vw - 40px);background:#fff;border:1px solid var(--bd);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.18);z-index:501;overflow:hidden;font-family:inherit}
 #claude-menu.open{display:block}
 .claude-menu-hdr{padding:12px 16px 4px;font-size:14px;font-weight:800;color:var(--navy);background:var(--bg2);border-bottom:1px solid transparent}
@@ -3071,15 +3077,22 @@ document.addEventListener('click',function(e){
   if(m)m.classList.remove('open');
 });
 
-// ── FAB drag-and-drop ──
+// ── FAB drag-and-drop, with snap-to-edge collapse ──
+const _SNAP_PX=50;        // distance from viewport edge that triggers a snap
+const _COLLAPSED_W=16;    // width of the collapsed handle (matches CSS)
+
 function _initClaudeFabDrag(){
   const fab=document.getElementById('claude-fab');
   if(!fab)return;
-  // Restore saved position
+  // Restore saved state
   try{
     const saved=JSON.parse(localStorage.getItem(_FAB_POS_KEY)||'null');
-    if(saved&&typeof saved.left==='number'&&typeof saved.top==='number'){
-      _applyFabPos(saved.left,saved.top);
+    if(saved){
+      if(saved.collapsed&&saved.edge){
+        _snapToEdge(saved.edge, typeof saved.top==='number'?saved.top:60);
+      } else if(typeof saved.left==='number'&&typeof saved.top==='number'){
+        _applyFabPos(saved.left,saved.top);
+      }
     }
   }catch(e){}
   const onPointerDown=(ev)=>{
@@ -3100,10 +3113,22 @@ function _initClaudeFabDrag(){
     const point=isTouch?ev.touches[0]:ev;
     const dx=point.clientX-_fabDrag.startX;
     const dy=point.clientY-_fabDrag.startY;
-    if(!_fabDrag.moved && (Math.abs(dx)>4||Math.abs(dy)>4)) _fabDrag.moved=true;
+    if(!_fabDrag.moved && (Math.abs(dx)>4||Math.abs(dy)>4)){
+      _fabDrag.moved=true;
+      // If we started a drag from the collapsed state, expand back to round
+      // and re-anchor at the cursor so the rest of the drag math works.
+      if(fab.classList.contains('collapsed')){
+        _expandFab();
+        const newLeft=point.clientX-24, newTop=point.clientY-24;
+        _applyFabPos(newLeft,newTop);
+        _fabDrag.startX=point.clientX;
+        _fabDrag.startY=point.clientY;
+        _fabDrag.origLeft=newLeft;
+        _fabDrag.origTop=newTop;
+      }
+    }
     if(_fabDrag.moved){
       _applyFabPos(_fabDrag.origLeft+dx, _fabDrag.origTop+dy);
-      // Close the menu while dragging — its old position is now wrong
       const m=document.getElementById('claude-menu');
       if(m)m.classList.remove('open');
       if(isTouch)ev.preventDefault();
@@ -3113,9 +3138,15 @@ function _initClaudeFabDrag(){
     if(!_fabDrag.dragging)return;
     _fabDrag.dragging=false;
     if(_fabDrag.moved){
+      // Snap-to-edge if released near a side edge
       const r=fab.getBoundingClientRect();
-      try{localStorage.setItem(_FAB_POS_KEY,JSON.stringify({left:r.left,top:r.top}));}catch(e){}
-      // Reset moved flag after the click event has had a chance to fire and check it
+      const centerY=r.top+r.height/2;
+      if(r.right>=window.innerWidth-_SNAP_PX){
+        _snapToEdge('right',centerY-36);
+      } else if(r.left<=_SNAP_PX){
+        _snapToEdge('left',centerY-36);
+      }
+      _saveFabState();
       setTimeout(()=>{_fabDrag.moved=false;},250);
     }
   };
@@ -3129,7 +3160,6 @@ function _initClaudeFabDrag(){
 function _applyFabPos(left,top){
   const fab=document.getElementById('claude-fab');
   if(!fab)return;
-  // Clamp to viewport so the FAB never scrolls off-screen
   const w=fab.offsetWidth||48, h=fab.offsetHeight||48;
   const cl=Math.max(4,Math.min(left,window.innerWidth-w-4));
   const ct=Math.max(4,Math.min(top,window.innerHeight-h-4));
@@ -3138,15 +3168,56 @@ function _applyFabPos(left,top){
   fab.style.right='auto';
   fab.style.bottom='auto';
 }
-// Re-clamp on window resize so a drag-to-edge stays visible
-window.addEventListener('resize',()=>{
+function _snapToEdge(edge,top){
+  const fab=document.getElementById('claude-fab');
+  if(!fab)return;
+  fab.classList.remove('left-edge','right-edge');
+  fab.classList.add('collapsed',edge+'-edge');
+  // Force layout to pick up the new (collapsed) dimensions
+  void fab.offsetWidth;
+  const h=fab.offsetHeight||72;
+  const cTop=Math.max(8,Math.min(window.innerHeight-h-8,top));
+  fab.style.top=cTop+'px';
+  fab.style.bottom='auto';
+  if(edge==='right'){
+    fab.style.left=(window.innerWidth-_COLLAPSED_W)+'px';
+    fab.style.right='auto';
+  } else {
+    fab.style.left='0px';
+    fab.style.right='auto';
+  }
+}
+function _expandFab(){
+  const fab=document.getElementById('claude-fab');
+  if(!fab)return;
+  fab.classList.remove('collapsed','left-edge','right-edge');
+  void fab.offsetWidth; // force re-layout to round button
+}
+function _saveFabState(){
   const fab=document.getElementById('claude-fab');
   if(!fab)return;
   const r=fab.getBoundingClientRect();
-  if(r.left===0&&r.top===0)return; // not yet positioned via drag
-  _applyFabPos(r.left,r.top);
+  const collapsed=fab.classList.contains('collapsed');
+  const edge=fab.classList.contains('right-edge')?'right':(fab.classList.contains('left-edge')?'left':null);
+  try{localStorage.setItem(_FAB_POS_KEY,JSON.stringify({
+    left:r.left,top:r.top,collapsed,edge
+  }));}catch(e){}
+}
+// Re-position on window resize (collapsed stays glued to its edge; expanded
+// gets re-clamped so it can't end up off-screen).
+window.addEventListener('resize',()=>{
+  const fab=document.getElementById('claude-fab');
+  if(!fab)return;
+  if(fab.classList.contains('collapsed')){
+    const edge=fab.classList.contains('right-edge')?'right':'left';
+    const r=fab.getBoundingClientRect();
+    _snapToEdge(edge,r.top);
+  } else {
+    const r=fab.getBoundingClientRect();
+    if(r.left===0&&r.top===0)return;
+    _applyFabPos(r.left,r.top);
+  }
 });
-// Wait until DOM is ready (the rest of the boot waits for dbLoad too)
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_initClaudeFabDrag);
 else _initClaudeFabDrag();
 
