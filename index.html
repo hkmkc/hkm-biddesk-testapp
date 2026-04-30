@@ -121,6 +121,9 @@ body.sb-collapsed #sb-collapse-btn svg{transform:rotate(180deg)}
 .claude-menu-ico{font-size:18px;flex-shrink:0;line-height:1.3}
 .claude-menu-lbl{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px}
 .claude-menu-d{font-size:11px;color:var(--tx2);line-height:1.4}
+.claude-menu-foot{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--bg3);border-top:1px solid var(--bd);font-size:10px;color:var(--tx2)}
+.claude-menu-foot a{color:var(--navy);text-decoration:none;font-weight:600}
+.claude-menu-foot a:hover{text-decoration:underline}
 /* Footer is now a 2-row stack: optional horizontal-scroll proxy on top,
    pagination/rows controls on the bottom. The proxy row only takes height
    when a wide table is active (display:none otherwise). */
@@ -3037,6 +3040,38 @@ function saveDraft(){
 // menu-toggle if the user actually intended to move the FAB.
 let _fabDrag={dragging:false,startX:0,startY:0,origLeft:0,origTop:0,moved:false};
 const _FAB_POS_KEY='claude-fab-pos';
+const _CLAUDE_PROJECT_KEY='claude-project-url';
+const _CLAUDE_PROJECT_DEFAULT='https://claude.ai/project/019ddefc-1e63-750c-8f6f-5ef65d09cc1d';
+
+// Returns the user's configured Claude.ai project URL, or the HKM BidDesk
+// default. Persisted in localStorage so the user can change it without code.
+function _getClaudeProjectUrl(){
+  try{return localStorage.getItem(_CLAUDE_PROJECT_KEY)||_CLAUDE_PROJECT_DEFAULT;}
+  catch(e){return _CLAUDE_PROJECT_DEFAULT;}
+}
+// Prompts the user for a new project URL, validates loosely, persists.
+function _setClaudeProjectUrl(){
+  const current=_getClaudeProjectUrl();
+  const url=prompt(
+    'Paste the Claude.ai project URL.\n\n'+
+    'Open claude.ai → Projects → click your project → copy the URL from the address bar.\n\n'+
+    'Format: https://claude.ai/project/<uuid>\n\n'+
+    '(Leave blank and press OK to reset to the default HKM BidDesk project. Cancel to keep current.)',
+    current
+  );
+  if(url===null)return; // cancelled
+  if(!url.trim()){
+    try{localStorage.removeItem(_CLAUDE_PROJECT_KEY);}catch(e){}
+    toast('Reset to default HKM BidDesk project.','ok','Project Updated',4000);
+    return;
+  }
+  if(!/^https:\/\/claude\.ai\/project\//.test(url.trim())){
+    toast('That doesn\'t look like a Claude.ai project URL. Should start with https://claude.ai/project/','er','Invalid URL',6000);
+    return;
+  }
+  try{localStorage.setItem(_CLAUDE_PROJECT_KEY,url.trim());}catch(e){}
+  toast('Project URL saved. Future "Send to Claude" clicks will open this project.','ok','Project Updated',5000);
+}
 
 // Position the menu relative to the FAB's current location so it follows when
 // the FAB is moved. Picks above/below + left/right based on available space.
@@ -3419,9 +3454,9 @@ async function claudeAction(mode){
     console.log('[Claude prompt]\n\n'+result.prompt);
     return;
   }
-  // Open Claude.ai in new tab
-  window.open('https://claude.ai/new','_blank','noopener');
-  toast(`Prompt copied. Switching to Claude.ai — paste with Ctrl+V (or Cmd+V) and press Enter.`,'ok','Sent to Claude.ai',5000);
+  // Open the configured Claude.ai project in a new tab
+  window.open(_getClaudeProjectUrl(),'_blank','noopener');
+  toast(`Prompt copied. HKM BidDesk project tab opened — paste with Ctrl+V (or Cmd+V) and press Enter.`,'ok','Sent to Claude.ai',5000);
 }
 
 // ── BOOT ──
@@ -7592,6 +7627,10 @@ window.addEventListener('hashchange',function(){
   <div class="claude-menu-item" onclick="claudeAction('free-chat')">
     <span class="claude-menu-ico">💬</span>
     <div><div class="claude-menu-lbl">Just talk to Claude</div><div class="claude-menu-d">Generic chat with current view's data attached</div></div>
+  </div>
+  <div class="claude-menu-foot">
+    <span id="claude-project-status">Project: <b>HKM BidDesk</b></span>
+    <a href="#" onclick="event.preventDefault();event.stopPropagation();_setClaudeProjectUrl()">change</a>
   </div>
 </div>
 
