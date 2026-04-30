@@ -738,6 +738,15 @@ async function sbSync(){
         );
         DB.items=itemsMerge.items;
         DB._itemsTouched=itemsMerge.touched;
+
+        // QBE Purchase History: per-casino timestamped merge for lps + qbeRows.
+        const qbeMerge=_mergeQbeByTimestamp(
+          existing.data.lps, existing.data.qbeRows, existing.data._qbeTouched,
+          DB.lps, DB.qbeRows, DB._qbeTouched
+        );
+        DB.lps=qbeMerge.lps;
+        DB.qbeRows=qbeMerge.qbeRows;
+        DB._qbeTouched=qbeMerge.touched;
       }
     }catch(pullE){
       // Pre-push pull failed — push current local anyway; sbLoad poll will
@@ -864,7 +873,17 @@ async function sbLoad(forceRender=false, forceUsers=false){
             const b=(itemsMerge.items||{})[k]||[];
             if(a!==b){itemsChanged=true;break;}
           }
-          if(addedSomething||itemsChanged){
+          // QBE merge — per-casino timestamps
+          const qbeMerge=_mergeQbeByTimestamp(
+            data.data.lps, data.data.qbeRows, data.data._qbeTouched,
+            DB.lps, DB.qbeRows, DB._qbeTouched
+          );
+          // Detect QBE change by comparing key sets — cheap shallow check
+          const qbeChanged=(
+            Object.keys(qbeMerge.lps).length!==Object.keys(DB.lps||{}).length ||
+            Object.keys(qbeMerge.qbeRows).length!==Object.keys(DB.qbeRows||{}).length
+          );
+          if(addedSomething||itemsChanged||qbeChanged){
             if(addedSomething){
               DB.periods=newPeriods;
               DB._deletedPeriods=tombs;
@@ -874,6 +893,11 @@ async function sbLoad(forceRender=false, forceUsers=false){
             if(itemsChanged){
               DB.items=itemsMerge.items;
               DB._itemsTouched=itemsMerge.touched;
+            }
+            if(qbeChanged){
+              DB.lps=qbeMerge.lps;
+              DB.qbeRows=qbeMerge.qbeRows;
+              DB._qbeTouched=qbeMerge.touched;
             }
             localStorage.setItem('hkm_db',JSON.stringify(DB));
             if(forceRender)render();
@@ -892,6 +916,10 @@ async function sbLoad(forceRender=false, forceUsers=false){
       // Snapshot items + per-key timestamps so we can merge after Object.assign
       const _localItems=DB.items?{...DB.items}:{};
       const _localItemsTouched=DB._itemsTouched?{...DB._itemsTouched}:{};
+      // Snapshot QBE purchase-history state too — same pattern, per-casino timestamps
+      const _localLps=DB.lps?{...DB.lps}:{};
+      const _localQbeRows=DB.qbeRows?{...DB.qbeRows}:{};
+      const _localQbeTouched=DB._qbeTouched?{...DB._qbeTouched}:{};
       // Fix 2: snapshot savedBids so remote can't silently delete a submission the local device made
       const _localSavedBids=DB.savedBids?JSON.parse(JSON.stringify(DB.savedBids)):null;
       // Pending-sync queue is strictly per-device — do not let remote clobber
@@ -932,6 +960,14 @@ async function sbLoad(forceRender=false, forceUsers=false){
       );
       DB.items=_itemsMerge.items;
       DB._itemsTouched=_itemsMerge.touched;
+      // QBE Purchase History: per-casino timestamped merge
+      const _qbeMerge=_mergeQbeByTimestamp(
+        DB.lps, DB.qbeRows, DB._qbeTouched,
+        _localLps, _localQbeRows, _localQbeTouched
+      );
+      DB.lps=_qbeMerge.lps;
+      DB.qbeRows=_qbeMerge.qbeRows;
+      DB._qbeTouched=_qbeMerge.touched;
       // Fix 2: merge savedBids — union by id, local wins on id collision, newest-first, cap 30/key.
       // Protects submissions on this device from being silently dropped by stale remote blobs.
       if(_localSavedBids){
@@ -1059,6 +1095,37 @@ const gI=(cid,cat)=>DB.items[`${cid}|${cat}`]||[];
 // on the same key, preventing a stale tab from silently overwriting a
 // recent casino-sheet upload.
 function _touchItems(key){if(!DB._itemsTouched)DB._itemsTouched={};DB._itemsTouched[key]=Date.now();}
+// Mark a casino's QBE Purchase History as freshly uploaded. Sync uses
+// these timestamps to decide whose lps/qbeRows for that casino wins.
+// Per-casino (not per-item) because QBE upload is a wipe-and-rebuild
+// for the entire casino — partial conflict resolution would mix data
+// from two different upload moments.
+function _touchQbe(cid){if(!DB._qbeTouched)DB._qbeTouched={};DB._qbeTouched[cid]=Date.now();}
+// Per-casino timestamped merge for lps + qbeRows. The keys in each
+// object are "cid|item" — we extract the cid prefix to decide per-casino
+// which side's complete dataset wins. Untouched legacy data falls back
+// to local (current device canonical for unmarked data).
+function _mergeQbeByTimestamp(remoteLps, remoteQbeRows, remoteTouched, localLps, localQbeRows, localTouched){
+  remoteLps=remoteLps||{};remoteQbeRows=remoteQbeRows||{};remoteTouched=remoteTouched||{};
+  localLps=localLps||{};localQbeRows=localQbeRows||{};localTouched=localTouched||{};
+  const cids=new Set();
+  Object.keys(remoteLps).forEach(k=>{const c=k.split('|')[0];if(c)cids.add(c);});
+  Object.keys(localLps).forEach(k=>{const c=k.split('|')[0];if(c)cids.add(c);});
+  Object.keys(remoteQbeRows).forEach(k=>{const c=k.split('|')[0];if(c)cids.add(c);});
+  Object.keys(localQbeRows).forEach(k=>{const c=k.split('|')[0];if(c)cids.add(c);});
+  const lps={},qbeRows={},touched={};
+  cids.forEach(cid=>{
+    const rT=remoteTouched[cid]||0, lT=localTouched[cid]||0;
+    const useRemote=rT>lT; // local wins on tie/legacy
+    const winLps=useRemote?remoteLps:localLps;
+    const winQbe=useRemote?remoteQbeRows:localQbeRows;
+    const prefix=cid+'|';
+    Object.keys(winLps).forEach(k=>{if(k.startsWith(prefix))lps[k]=winLps[k];});
+    Object.keys(winQbe).forEach(k=>{if(k.startsWith(prefix))qbeRows[k]=winQbe[k];});
+    if(rT||lT)touched[cid]=useRemote?rT:lT;
+  });
+  return{lps,qbeRows,touched};
+}
 // Per-key timestamped merge: when both sides have data for the same
 // (casino|category) key, the side with the newer _itemsTouched wins.
 // If neither has a timestamp, local wins (current device is canonical
@@ -2587,6 +2654,7 @@ function hQBE(inp){
           if(!DB.qbeRows[key].length)delete DB.qbeRows[key];
         });
         if(pruned)console.log(`Pruned ${pruned} purchase records older than 15 months.`);
+        _touchQbe(cid); // mark fresh so sync won't revert to a stale tab's older lps/qbeRows
         dbSave();hProg('qbe');
         if(n===0){
           sal('qa',`⚠ No items matched. Detected headers: ${hdrs.slice(0,8).join(', ')}. Expected columns: Date, Item (or Item Code), Sales Price, Amount.`,'wn',0);
