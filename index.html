@@ -101,14 +101,22 @@ body.sb-collapsed #sb-collapse-btn svg{transform:rotate(180deg)}
 .sb-add:hover{color:rgba(255,255,255,.65);background:rgba(255,255,255,.06)}
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fff}
 #main-content{flex:1;padding:22px;overflow-y:auto;overflow-x:hidden}
-/* Claude.ai helper — docked tab + slide-out menu (no longer draggable).
-   The tab is always glued to the configured edge of the viewport, vertically
-   centered. Click opens the menu; click again (or outside) closes it. */
-#claude-fab{position:fixed;top:50%;transform:translateY(-50%);width:18px;height:80px;background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 100%);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:500;transition:background .15s,box-shadow .15s,width .15s;border:2px solid var(--gold);user-select:none;-webkit-user-select:none}
-#claude-fab.right-edge{right:0;left:auto;border-right-width:0;border-radius:8px 0 0 8px;box-shadow:-3px 0 10px rgba(0,0,0,.2)}
-#claude-fab.left-edge{left:0;right:auto;border-left-width:0;border-radius:0 8px 8px 0;box-shadow:3px 0 10px rgba(0,0,0,.2)}
-#claude-fab:hover{width:22px;background:var(--navy3)}
-#claude-fab svg{width:12px;height:12px}
+/* Claude.ai helper — two states:
+   1) .circular — round button fixed at bottom-right (NOT draggable)
+   2) .docked   — thin vertical tab glued to the chosen side edge,
+                  vertically draggable along that edge. Click opens menu. */
+#claude-fab{position:fixed;background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 100%);color:#fff;display:flex;align-items:center;justify-content:center;z-index:500;border:2px solid var(--gold);user-select:none;-webkit-user-select:none;transition:background .15s,box-shadow .15s,width .18s ease,height .18s ease,border-radius .18s ease}
+/* Circular state */
+#claude-fab.circular{right:20px;bottom:60px;top:auto;left:auto;width:48px;height:48px;border-radius:50%;cursor:pointer;box-shadow:0 4px 16px rgba(27,92,158,.4)}
+#claude-fab.circular:hover{box-shadow:0 6px 22px rgba(27,92,158,.55)}
+#claude-fab.circular svg{width:22px;height:22px}
+/* Docked-tab state */
+#claude-fab.docked{width:18px;height:80px;cursor:grab;touch-action:none}
+#claude-fab.docked:active{cursor:grabbing}
+#claude-fab.docked.right-edge{right:0;left:auto;border-right-width:0;border-radius:8px 0 0 8px;box-shadow:-3px 0 10px rgba(0,0,0,.2)}
+#claude-fab.docked.left-edge{left:0;right:auto;border-left-width:0;border-radius:0 8px 8px 0;box-shadow:3px 0 10px rgba(0,0,0,.2)}
+#claude-fab.docked:hover{width:22px;background:var(--navy3)}
+#claude-fab.docked svg{width:12px;height:12px}
 #claude-menu{display:none;position:fixed;right:20px;bottom:120px;width:340px;max-width:calc(100vw - 40px);background:#fff;border:1px solid var(--bd);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.18);z-index:501;overflow:hidden;font-family:inherit}
 #claude-menu.open{display:block}
 .claude-menu-hdr{padding:12px 16px 4px;font-size:14px;font-weight:800;color:var(--navy);background:var(--bg2);border-bottom:1px solid transparent}
@@ -3105,38 +3113,149 @@ document.addEventListener('click',function(e){
   if(m)m.classList.remove('open');
 });
 
-// ── FAB edge configuration (no drag — just docked left or right) ──
-function _getClaudeFabEdge(){
-  try{const e=localStorage.getItem(_FAB_EDGE_KEY);return e==='left'?'left':'right';}
-  catch(e){return 'right';}
+// ── FAB state: circular (default) or docked-tab (vertically draggable) ──
+const _FAB_STATE_KEY='claude-fab-state'; // {state, edge, top}
+let _fabVDrag={dragging:false,startY:0,origTop:0,moved:false};
+
+function _getClaudeFabState(){
+  try{
+    const s=JSON.parse(localStorage.getItem(_FAB_STATE_KEY)||'null');
+    if(s&&typeof s==='object')return s;
+  }catch(e){}
+  return{state:'circular',edge:'right',top:null};
 }
-function _applyClaudeFabEdge(edge){
+function _saveClaudeFabState(){
   const fab=document.getElementById('claude-fab');
   if(!fab)return;
-  fab.classList.remove('left-edge','right-edge');
-  fab.classList.add(edge+'-edge');
+  const isDocked=fab.classList.contains('docked');
+  const edge=fab.classList.contains('left-edge')?'left':'right';
+  const r=fab.getBoundingClientRect();
+  const payload={state:isDocked?'docked':'circular',edge,top:isDocked?r.top:null};
+  try{localStorage.setItem(_FAB_STATE_KEY,JSON.stringify(payload));}catch(e){}
 }
-// User-facing toggle (called from the menu footer link)
-function _toggleClaudeFabEdge(){
-  const newEdge=_getClaudeFabEdge()==='right'?'left':'right';
-  try{localStorage.setItem(_FAB_EDGE_KEY,newEdge);}catch(e){}
-  _applyClaudeFabEdge(newEdge);
+function _applyClaudeFabState(state,edge,top){
+  const fab=document.getElementById('claude-fab');
+  if(!fab)return;
+  fab.classList.remove('circular','docked','left-edge','right-edge');
+  // Reset inline positioning so each state's CSS takes effect cleanly
+  fab.style.left='';fab.style.right='';fab.style.top='';fab.style.bottom='';
+  if(state==='docked'){
+    fab.classList.add('docked',(edge==='left'?'left':'right')+'-edge');
+    // Vertically position: saved top, else center
+    const h=fab.offsetHeight||80;
+    const desiredTop=(typeof top==='number')?top:Math.max(8,(window.innerHeight-h)/2);
+    fab.style.top=Math.max(8,Math.min(window.innerHeight-h-8,desiredTop))+'px';
+  } else {
+    fab.classList.add('circular');
+  }
+}
+// Menu actions
+function _dockClaudeFab(){
+  const fab=document.getElementById('claude-fab');
+  if(!fab)return;
+  const cur=_getClaudeFabState();
+  const edge=cur.edge||'right';
+  _applyClaudeFabState('docked',edge,cur.top);
+  _saveClaudeFabState();
   _updateClaudeFooter();
-  // Keep the menu open and re-position it next to the new edge
   const m=document.getElementById('claude-menu');
   if(m&&m.classList.contains('open'))_positionClaudeMenu();
 }
+function _undockClaudeFab(){
+  _applyClaudeFabState('circular','right',null);
+  _saveClaudeFabState();
+  _updateClaudeFooter();
+  const m=document.getElementById('claude-menu');
+  if(m&&m.classList.contains('open'))_positionClaudeMenu();
+}
+function _toggleClaudeFabEdge(){
+  const fab=document.getElementById('claude-fab');
+  if(!fab||!fab.classList.contains('docked'))return;
+  const cur=_getClaudeFabState();
+  const newEdge=cur.edge==='right'?'left':'right';
+  _applyClaudeFabState('docked',newEdge,cur.top);
+  _saveClaudeFabState();
+  _updateClaudeFooter();
+  const m=document.getElementById('claude-menu');
+  if(m&&m.classList.contains('open'))_positionClaudeMenu();
+}
+
+// Vertical-only drag (active only while docked)
+function _initClaudeFabVDrag(){
+  const fab=document.getElementById('claude-fab');
+  if(!fab)return;
+  const onDown=(ev)=>{
+    if(!fab.classList.contains('docked'))return;
+    const isTouch=ev.type==='touchstart';
+    const point=isTouch?ev.touches[0]:ev;
+    _fabVDrag.dragging=true;
+    _fabVDrag.moved=false;
+    _fabVDrag.startY=point.clientY;
+    _fabVDrag.origTop=fab.getBoundingClientRect().top;
+    if(!isTouch)ev.preventDefault();
+  };
+  const onMove=(ev)=>{
+    if(!_fabVDrag.dragging)return;
+    const isTouch=ev.type==='touchmove';
+    const point=isTouch?ev.touches[0]:ev;
+    const dy=point.clientY-_fabVDrag.startY;
+    if(!_fabVDrag.moved&&Math.abs(dy)>4)_fabVDrag.moved=true;
+    if(_fabVDrag.moved){
+      const h=fab.offsetHeight||80;
+      const newTop=Math.max(8,Math.min(window.innerHeight-h-8,_fabVDrag.origTop+dy));
+      fab.style.top=newTop+'px';
+      const m=document.getElementById('claude-menu');
+      if(m)m.classList.remove('open');
+      if(isTouch)ev.preventDefault();
+    }
+  };
+  const onUp=()=>{
+    if(!_fabVDrag.dragging)return;
+    _fabVDrag.dragging=false;
+    if(_fabVDrag.moved){
+      _saveClaudeFabState();
+      setTimeout(()=>{_fabVDrag.moved=false;},250);
+    }
+  };
+  fab.addEventListener('mousedown',onDown);
+  document.addEventListener('mousemove',onMove);
+  document.addEventListener('mouseup',onUp);
+  fab.addEventListener('touchstart',onDown,{passive:true});
+  document.addEventListener('touchmove',onMove,{passive:false});
+  document.addEventListener('touchend',onUp);
+}
 function _initClaudeFab(){
-  _applyClaudeFabEdge(_getClaudeFabEdge());
+  const s=_getClaudeFabState();
+  _applyClaudeFabState(s.state,s.edge,s.top);
+  _initClaudeFabVDrag();
   _updateClaudeFooter();
 }
 function _updateClaudeFooter(){
   const status=document.getElementById('claude-project-status');
-  if(status){
-    const edge=_getClaudeFabEdge();
-    status.innerHTML=`Project: <b>HKM BidDesk</b> · Tab on <b>${edge}</b>`;
-  }
+  const dock=document.getElementById('claude-dock-link');
+  const flip=document.getElementById('claude-flip-link');
+  if(!status)return;
+  const fab=document.getElementById('claude-fab');
+  const isDocked=fab&&fab.classList.contains('docked');
+  const edge=isDocked&&fab.classList.contains('left-edge')?'left':'right';
+  status.innerHTML=`Project: <b>HKM BidDesk</b> · ${isDocked?`Docked <b>${edge}</b>`:'Floater'}`;
+  if(dock)dock.textContent=isDocked?'undock':'dock to side';
+  if(flip)flip.style.display=isDocked?'inline':'none';
 }
+// Suppress menu-toggle if the click was actually a drag-release
+const _origToggleClaudeMenu=toggleClaudeMenu;
+toggleClaudeMenu=function(e){
+  if(_fabVDrag.moved){_fabVDrag.moved=false;return;}
+  return _origToggleClaudeMenu(e);
+};
+// Re-clamp on resize so the docked tab stays in view
+window.addEventListener('resize',()=>{
+  const fab=document.getElementById('claude-fab');
+  if(!fab||!fab.classList.contains('docked'))return;
+  const h=fab.offsetHeight||80;
+  const cur=parseInt(fab.style.top||'0',10);
+  fab.style.top=Math.max(8,Math.min(window.innerHeight-h-8,cur))+'px';
+});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_initClaudeFab);
 else _initClaudeFab();
 
@@ -7515,8 +7634,9 @@ window.addEventListener('hashchange',function(){
   <div class="claude-menu-foot">
     <span id="claude-project-status">Project: <b>HKM BidDesk</b></span>
     <span style="display:flex;gap:10px">
-      <a href="#" onclick="event.preventDefault();event.stopPropagation();_toggleClaudeFabEdge()">flip side</a>
-      <a href="#" onclick="event.preventDefault();event.stopPropagation();_setClaudeProjectUrl()">change project</a>
+      <a href="#" id="claude-dock-link" onclick="event.preventDefault();event.stopPropagation();(document.getElementById('claude-fab').classList.contains('docked')?_undockClaudeFab():_dockClaudeFab())">dock to side</a>
+      <a href="#" id="claude-flip-link" onclick="event.preventDefault();event.stopPropagation();_toggleClaudeFabEdge()">flip side</a>
+      <a href="#" onclick="event.preventDefault();event.stopPropagation();_setClaudeProjectUrl()">project</a>
     </span>
   </div>
 </div>
