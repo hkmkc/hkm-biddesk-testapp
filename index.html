@@ -101,6 +101,20 @@ body.sb-collapsed #sb-collapse-btn svg{transform:rotate(180deg)}
 .sb-add:hover{color:rgba(255,255,255,.65);background:rgba(255,255,255,.06)}
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fff}
 #main-content{flex:1;padding:22px;overflow-y:auto;overflow-x:hidden}
+/* Claude.ai helper — floating button + slide-out menu */
+#claude-fab{position:fixed;right:20px;bottom:60px;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 100%);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(27,92,158,.4);z-index:500;transition:transform .15s,box-shadow .15s;border:2px solid var(--gold)}
+#claude-fab:hover{transform:scale(1.08);box-shadow:0 6px 22px rgba(27,92,158,.55)}
+#claude-fab:active{transform:scale(.96)}
+#claude-menu{display:none;position:fixed;right:20px;bottom:120px;width:340px;max-width:calc(100vw - 40px);background:#fff;border:1px solid var(--bd);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.18);z-index:501;overflow:hidden;font-family:inherit}
+#claude-menu.open{display:block}
+.claude-menu-hdr{padding:12px 16px 4px;font-size:14px;font-weight:800;color:var(--navy);background:var(--bg2);border-bottom:1px solid transparent}
+.claude-menu-sub{padding:0 16px 10px;font-size:11px;color:var(--tx3);background:var(--bg2);border-bottom:1px solid var(--bd)}
+.claude-menu-item{display:flex;align-items:flex-start;gap:10px;padding:10px 16px;cursor:pointer;transition:background .12s;border-bottom:1px solid var(--bg3)}
+.claude-menu-item:last-child{border-bottom:none}
+.claude-menu-item:hover{background:var(--bg3)}
+.claude-menu-ico{font-size:18px;flex-shrink:0;line-height:1.3}
+.claude-menu-lbl{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:2px}
+.claude-menu-d{font-size:11px;color:var(--tx2);line-height:1.4}
 /* Footer is now a 2-row stack: optional horizontal-scroll proxy on top,
    pagination/rows controls on the bottom. The proxy row only takes height
    when a wide table is active (display:none otherwise). */
@@ -3005,6 +3019,227 @@ function saveDraft(){
   dbSave();
   sal('bal',`✓ ${n} draft prices saved. They will remain here after refresh until you Submit.`,'ok',6000);
   toast(`${n} draft price${n>1?'s':''} saved successfully. They stay here until you click Submit Bid.`,'ok','Draft Saved');
+}
+
+// ══════════════════════════════════════════════════════════════
+// CLAUDE.AI HELPER — clipboard-based, no API key needed.
+// Each action builds a context-rich prompt, copies to clipboard,
+// and opens Claude.ai in a new tab. User pastes & sends in their
+// existing Claude.ai chat (uses their existing subscription).
+// ══════════════════════════════════════════════════════════════
+function toggleClaudeMenu(e){
+  if(e)e.stopPropagation();
+  const m=document.getElementById('claude-menu');
+  if(m)m.classList.toggle('open');
+}
+// Close menu on any outside click
+document.addEventListener('click',function(e){
+  if(e.target.closest('#claude-fab')||e.target.closest('#claude-menu'))return;
+  const m=document.getElementById('claude-menu');
+  if(m)m.classList.remove('open');
+});
+
+// Helper: format a number as currency, blank if null
+function _ccy(v){return v==null||v===''||isNaN(v)?'—':'$'+Number(v).toFixed(2);}
+// Helper: format a margin as %, blank if null
+function _pct(v){return v==null||v===''||isNaN(v)?'—':Number(v).toFixed(1)+'%';}
+
+// ── Mode A: Bid Suggestions ──
+// Packages the current Draft Bid table (visible rows, with all comparison columns)
+// + the bidding SOP so Claude can follow your rules.
+function _claudeBidSuggestionsPrompt(){
+  if(S.view!=='bids'||S.bTab!=='draftbid'||!S.casino||!S.cat){
+    return{ok:false,msg:'Open the Draft Bid tab for any casino+category first, then try again.'};
+  }
+  const pa=DB.periods[S.cA]||DB.periods[0]||{lbl:'?',data:{}};
+  const pb=DB.periods[S.cB]||DB.periods[1]||DB.periods[0]||{lbl:'?',data:{}};
+  let its=gI(S.casino.id,S.cat);
+  its=applyFlt(its,'db');
+  if(!its.length)return{ok:false,msg:'No items visible. Clear filters or upload a casino sheet first.'};
+  const lines=its.map((it,i)=>{
+    const lps=gL(S.casino.id,it.item,it.hkm);
+    const _key=it.hkm&&it.hkm.trim()?it.hkm.trim():it.item;
+    const da=pa.data[_key]||pa.data[it.item]||{};
+    const db2=pb.data[_key]||pb.data[it.item]||{};
+    const lb=getLastBid(S.casino.id,S.cat,it.item);
+    const aMargin=mg(da.reg,da.cost);
+    const lbMargin=mg(lb,da.cost);
+    const cd=(da.cost!=null&&db2.cost!=null)?(da.cost-db2.cost):null;
+    return `${i+1}. ${it.hkm||'(no HKM)'} | ${it.item} | ${(it.desc||'').slice(0,60)} | ${it.unit||''}\n`+
+           `   A_cost=${_ccy(da.cost)} A_reg=${_ccy(da.reg)} A_margin=${_pct(aMargin)}\n`+
+           `   B_cost=${_ccy(db2.cost)} CostΔ=${cd!=null?(cd>=0?'+':'')+'$'+cd.toFixed(2):'—'}\n`+
+           `   Last_bid=${_ccy(lb)} Bid_margin=${_pct(lbMargin)}\n`+
+           `   Vol_365=${lps.v365||0} Vol_90=${lps.v90||0} Vol_30=${lps.v30||0} Vol_7=${lps.v7||0}`;
+  }).join('\n\n');
+  const prompt=`I'm setting bid prices for **${S.casino.name||S.casino.id} — ${S.cat}** in HKM BidDesk (a casino food/beverage bidding tool).\n\n`+
+    `**Bidding rules I follow:**\n`+
+    `1. Cost Delta first: if A_cost differs from B_cost, the new bid moves by exactly the cost delta (preserves margin in dollars).\n`+
+    `2. If no cost delta, use demand signals: high volume + winning margin → modest increase; declining volume → hold or modest decrease.\n`+
+    `3. Margin floor: never let bid margin drop below 10%.\n`+
+    `4. If Vol_30 = 0 → HOLD (don't decrease an inactive item).\n`+
+    `5. Round bids to clean numbers ($X.99 or $X.50 preferred for sub-$10 items, $XX.00 for higher).\n\n`+
+    `**Period A** = ${pa.lbl} (current cost). **Period B** = ${pb.lbl} (previous cost).\n\n`+
+    `**Items (${its.length}):**\n\n${lines}\n\n`+
+    `**Please suggest a new bid price for each item with brief reasoning.** Format as a table: HKM | Suggested Bid | Action (HOLD / INCREASE / DECREASE) | Why. Skip items where data is too sparse to decide.`;
+  return{ok:true,prompt};
+}
+
+// ── Mode B: Ask my data ──
+// Generic; packages whatever view is currently visible.
+function _claudeAskDataPrompt(){
+  let context='You are looking at HKM BidDesk — a casino food/beverage bidding tool.\n\n';
+  if(S.view==='dashboard'){
+    context+='**View: Dashboard.** Casinos, due dates, recent bid activity overview.\n\n';
+  } else if(S.view==='bids'&&S.casino&&S.cat){
+    context+=`**View: ${S.casino.name||S.casino.id} → ${S.cat} → ${S.bTab||'?'} tab**\n\n`;
+    if(S.bTab==='draftbid'){
+      const dr=_claudeBidSuggestionsPrompt();
+      if(dr.ok)context+=dr.prompt.split('\n\n').slice(1,-1).join('\n\n')+'\n\n';
+    } else if(S.bTab==='plhistory'){
+      const periods=(DB.periods||[]).slice(0,8);
+      context+=`**Price List History** — ${periods.length} most recent periods:\n`;
+      context+=periods.map(p=>`- ${p.bid_type||'?'} | ${p.lbl} | ${Object.keys(p.data||{}).length} items`).join('\n')+'\n\n';
+    } else if(S.bTab==='bidhistory'){
+      const k=S.casino.id+'|'+S.cat;
+      const sb=(DB.savedBids||{})[k]||[];
+      context+=`**Bid Price History** — ${sb.length} saved submissions for this category.\n`;
+      context+=sb.slice(0,8).map(s=>`- ${s.lbl} (${Object.keys(s.bids||{}).length} items, submitted ${new Date(parseInt((s.id||'').replace(/^sb/,''),10)||0).toLocaleDateString()})`).join('\n')+'\n\n';
+    }
+  } else if(S.view==='analytics'){
+    context+='**View: Analytics.** Per-casino performance metrics.\n\n';
+  }
+  return{ok:true,prompt:context+'I want to ask you questions about this data. Just answer based on what I share — don\'t guess at anything not shown.\n\n**My question:** [type your question here before sending]'};
+}
+
+// ── Mode C: Sanity Check ──
+// Compare latest two price-list periods + flag anything weird.
+function _claudeSanityCheckPrompt(){
+  if(!DB.periods||DB.periods.length<2){
+    return{ok:false,msg:'Need at least 2 price-list periods to compare. Upload a Master Price List first.'};
+  }
+  const a=sortedPeriods()[0]||DB.periods[0]; // newest
+  const b=sortedPeriods()[1]||DB.periods[1]; // previous
+  const aKeys=Object.keys(a.data||{});
+  const bKeys=Object.keys(b.data||{});
+  const all=new Set([...aKeys,...bKeys]);
+  const dropped=[];
+  const added=[];
+  const big=[];
+  all.forEach(k=>{
+    const aD=a.data[k], bD=b.data[k];
+    if(bD && !aD){dropped.push({hkm:k,desc:(bD.desc||'').slice(0,40),lastCost:bD.cost,lastReg:bD.reg});return;}
+    if(aD && !bD){added.push({hkm:k,desc:(aD.desc||'').slice(0,40),newCost:aD.cost,newReg:aD.reg});return;}
+    if(aD && bD){
+      const costPct=bD.cost>0?Math.abs(aD.cost-bD.cost)/bD.cost*100:0;
+      const regPct=bD.reg>0?Math.abs((aD.reg||0)-(bD.reg||0))/bD.reg*100:0;
+      if(costPct>=15||regPct>=15){
+        big.push({hkm:k,desc:(aD.desc||bD.desc||'').slice(0,40),
+          oldCost:bD.cost,newCost:aD.cost,costPct:costPct.toFixed(1),
+          oldReg:bD.reg,newReg:aD.reg,regPct:regPct.toFixed(1)});
+      }
+    }
+  });
+  big.sort((x,y)=>parseFloat(y.costPct)-parseFloat(x.costPct));
+  const prompt=`Sanity check on a freshly uploaded price list (HKM BidDesk).\n\n`+
+    `**Comparison:**  Latest "${a.bid_type||'?'} - ${a.lbl}" (${aKeys.length} items)  vs.  Previous "${b.bid_type||'?'} - ${b.lbl}" (${bKeys.length} items).\n\n`+
+    `**Items dropped from latest** (were in previous, missing now): ${dropped.length}\n`+
+    dropped.slice(0,15).map(d=>`  • ${d.hkm} — ${d.desc} (was cost ${_ccy(d.lastCost)} / reg ${_ccy(d.lastReg)})`).join('\n')+
+    (dropped.length>15?`\n  …and ${dropped.length-15} more`:'')+'\n\n'+
+    `**New items in latest** (not in previous): ${added.length}\n`+
+    added.slice(0,15).map(d=>`  • ${d.hkm} — ${d.desc} (cost ${_ccy(d.newCost)} / reg ${_ccy(d.newReg)})`).join('\n')+
+    (added.length>15?`\n  …and ${added.length-15} more`:'')+'\n\n'+
+    `**Big price changes** (≥15% on cost or reg, sorted by cost-change %): ${big.length}\n`+
+    big.slice(0,30).map(d=>`  • ${d.hkm} — ${d.desc}: cost ${_ccy(d.oldCost)} → ${_ccy(d.newCost)} (${d.costPct}%), reg ${_ccy(d.oldReg)} → ${_ccy(d.newReg)} (${d.regPct}%)`).join('\n')+
+    (big.length>30?`\n  …and ${big.length-30} more`:'')+'\n\n'+
+    `**Please review** and tell me:\n`+
+    `1. Which dropped items are genuinely discontinued vs. likely missing by mistake?\n`+
+    `2. Which big price changes look like data-entry errors vs. legitimate market moves?\n`+
+    `3. Any items I should be especially careful about when bidding this week?`;
+  return{ok:true,prompt};
+}
+
+// ── Mode E: Weekly Summary ──
+function _claudeWeeklySummaryPrompt(){
+  const now=new Date();
+  const weekAgo=now.getTime()-7*86400000;
+  const submissions=[];
+  Object.keys(DB.savedBids||{}).forEach(k=>{
+    const arr=DB.savedBids[k]||[];
+    arr.forEach(sb=>{
+      const ts=parseInt((sb.id||'').replace(/^sb/,''),10)||0;
+      if(ts>=weekAgo){
+        const [cid,cat]=k.split('|');
+        submissions.push({cid,cat,lbl:sb.lbl,dt:sb.dt,dtTo:sb.dtTo,n:Object.keys(sb.bids||{}).length,ts});
+      }
+    });
+  });
+  submissions.sort((a,b)=>b.ts-a.ts);
+  const dueDates=(typeof DUE_DATES!=='undefined'?DUE_DATES:[]).map(dd=>{
+    let nextDue=null;
+    try{nextDue=getNextDue(dd);}catch(e){}
+    const status=nextDue?(getBidStatus?(getBidStatus(dd.id)||''):''):'';
+    return{name:dd.name,type:dd.type,due:nextDue?nextDue.toLocaleDateString():'?',status};
+  });
+  const prompt=`Generate a one-pager weekly summary for my boss (HKM BidDesk weekly bid review).\n\n`+
+    `**Date:** ${now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}\n\n`+
+    `**Bid submissions in the last 7 days (${submissions.length} total):**\n`+
+    (submissions.length?submissions.slice(0,30).map(s=>`  • ${s.cid} → ${s.cat}: "${s.lbl}" — ${s.n} items priced (${new Date(s.ts).toLocaleDateString()})`).join('\n'):'  (none this week)')+
+    (submissions.length>30?`\n  …and ${submissions.length-30} more`:'')+'\n\n'+
+    `**Due-date status (next 14 days):**\n`+
+    dueDates.map(d=>`  • ${d.name} (${d.type}) — due ${d.due}${d.status?` [${d.status}]`:''}`).join('\n')+'\n\n'+
+    `**Please write a concise one-pager covering:**\n`+
+    `- Highlights of the week (volume, casinos covered, anything notable)\n`+
+    `- Anything missed or behind schedule\n`+
+    `- Headline numbers (e.g., total items priced, casinos serviced)\n`+
+    `- Recommendations for next week\n\n`+
+    `Tone: professional, factual, easy for a non-bidder to skim.`;
+  return{ok:true,prompt};
+}
+
+// ── Mode F: Free chat ──
+function _claudeFreeChatPrompt(){
+  const ask=_claudeAskDataPrompt();
+  return{ok:true,prompt:ask.prompt.replace('I want to ask you questions about this data','I want to chat with you about my work in this app').replace('My question:','Type your message:')};
+}
+
+// ── Dispatch ──
+async function claudeAction(mode){
+  document.getElementById('claude-menu').classList.remove('open');
+  let result;
+  try{
+    if(mode==='bid-suggestions')result=_claudeBidSuggestionsPrompt();
+    else if(mode==='ask-data')result=_claudeAskDataPrompt();
+    else if(mode==='sanity-check')result=_claudeSanityCheckPrompt();
+    else if(mode==='weekly-summary')result=_claudeWeeklySummaryPrompt();
+    else if(mode==='free-chat')result=_claudeFreeChatPrompt();
+    else return;
+  }catch(e){
+    toast(`Couldn't build the prompt: ${e.message}`,'er','Claude Helper Error',6000);
+    return;
+  }
+  if(!result.ok){toast(result.msg,'wn','Claude Helper',6000);return;}
+  // Copy to clipboard
+  let copied=false;
+  try{
+    await navigator.clipboard.writeText(result.prompt);
+    copied=true;
+  }catch(e){
+    // Fallback: textarea trick (older browsers / non-https)
+    try{
+      const ta=document.createElement('textarea');
+      ta.value=result.prompt;ta.style.position='fixed';ta.style.opacity='0';
+      document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+      copied=true;
+    }catch(e2){copied=false;}
+  }
+  if(!copied){
+    toast(`Couldn't copy automatically. Open the console — your prompt is logged there.`,'wn','Clipboard Blocked',8000);
+    console.log('[Claude prompt]\n\n'+result.prompt);
+    return;
+  }
+  // Open Claude.ai in new tab
+  window.open('https://claude.ai/new','_blank','noopener');
+  toast(`Prompt copied. Switching to Claude.ai — paste with Ctrl+V (or Cmd+V) and press Enter.`,'ok','Sent to Claude.ai',5000);
 }
 
 // ── BOOT ──
@@ -7147,6 +7382,35 @@ window.addEventListener('hashchange',function(){
     <button onclick="closeAdminPanel()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;opacity:.7;padding:4px 8px">✕</button>
   </div>
   <div id="admin-panel-body" style="padding:16px 20px"></div>
+</div>
+
+<!-- ── Claude.ai helper: floating button + menu ────────────────────────── -->
+<div id="claude-fab" onclick="toggleClaudeMenu(event)" title="Send to Claude.ai">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+</div>
+<div id="claude-menu">
+  <div class="claude-menu-hdr">Send to Claude.ai</div>
+  <div class="claude-menu-sub">Copies a prompt to your clipboard, opens Claude.ai. Paste &amp; send.</div>
+  <div class="claude-menu-item" onclick="claudeAction('bid-suggestions')">
+    <span class="claude-menu-ico">💡</span>
+    <div><div class="claude-menu-lbl">Bid suggestions</div><div class="claude-menu-d">Suggest new bid prices for the current Draft Bid table</div></div>
+  </div>
+  <div class="claude-menu-item" onclick="claudeAction('ask-data')">
+    <span class="claude-menu-ico">🔍</span>
+    <div><div class="claude-menu-lbl">Ask my data</div><div class="claude-menu-d">Open-ended questions about whatever's on screen</div></div>
+  </div>
+  <div class="claude-menu-item" onclick="claudeAction('sanity-check')">
+    <span class="claude-menu-ico">🚨</span>
+    <div><div class="claude-menu-lbl">Sanity check</div><div class="claude-menu-d">Flag anomalies between latest &amp; previous price list periods</div></div>
+  </div>
+  <div class="claude-menu-item" onclick="claudeAction('weekly-summary')">
+    <span class="claude-menu-ico">📋</span>
+    <div><div class="claude-menu-lbl">Weekly summary</div><div class="claude-menu-d">One-pager of this week's bid activity for your boss</div></div>
+  </div>
+  <div class="claude-menu-item" onclick="claudeAction('free-chat')">
+    <span class="claude-menu-ico">💬</span>
+    <div><div class="claude-menu-lbl">Just talk to Claude</div><div class="claude-menu-d">Generic chat with current view's data attached</div></div>
+  </div>
 </div>
 
 </body>
