@@ -102,9 +102,9 @@ body.sb-collapsed #sb-collapse-btn svg{transform:rotate(180deg)}
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fff}
 #main-content{flex:1;padding:22px;overflow-y:auto;overflow-x:hidden}
 /* Claude.ai helper — floating button + slide-out menu */
-#claude-fab{position:fixed;right:20px;bottom:60px;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 100%);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(27,92,158,.4);z-index:500;transition:transform .15s,box-shadow .15s;border:2px solid var(--gold)}
-#claude-fab:hover{transform:scale(1.08);box-shadow:0 6px 22px rgba(27,92,158,.55)}
-#claude-fab:active{transform:scale(.96)}
+#claude-fab{position:fixed;right:20px;bottom:60px;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 100%);color:#fff;display:flex;align-items:center;justify-content:center;cursor:grab;box-shadow:0 4px 16px rgba(27,92,158,.4);z-index:500;transition:box-shadow .15s,transform .15s;border:2px solid var(--gold);user-select:none;-webkit-user-select:none;touch-action:none}
+#claude-fab:active{cursor:grabbing}
+#claude-fab:hover{box-shadow:0 6px 22px rgba(27,92,158,.55)}
 #claude-menu{display:none;position:fixed;right:20px;bottom:120px;width:340px;max-width:calc(100vw - 40px);background:#fff;border:1px solid var(--bd);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.18);z-index:501;overflow:hidden;font-family:inherit}
 #claude-menu.open{display:block}
 .claude-menu-hdr{padding:12px 16px 4px;font-size:14px;font-weight:800;color:var(--navy);background:var(--bg2);border-bottom:1px solid transparent}
@@ -3027,10 +3027,42 @@ function saveDraft(){
 // and opens Claude.ai in a new tab. User pastes & sends in their
 // existing Claude.ai chat (uses their existing subscription).
 // ══════════════════════════════════════════════════════════════
+// Drag state — distinguishes a click from a drag and lets us suppress the
+// menu-toggle if the user actually intended to move the FAB.
+let _fabDrag={dragging:false,startX:0,startY:0,origLeft:0,origTop:0,moved:false};
+const _FAB_POS_KEY='claude-fab-pos';
+
+// Position the menu relative to the FAB's current location so it follows when
+// the FAB is moved. Picks above/below + left/right based on available space.
+function _positionClaudeMenu(){
+  const fab=document.getElementById('claude-fab');
+  const m=document.getElementById('claude-menu');
+  if(!fab||!m)return;
+  const r=fab.getBoundingClientRect();
+  const vw=window.innerWidth, vh=window.innerHeight;
+  const menuW=340, menuH=Math.min(380,vh-40);
+  // Vertical: prefer above the FAB; if not enough room, go below.
+  let top=r.top-menuH-10;
+  if(top<10)top=Math.min(r.bottom+10,vh-menuH-10);
+  if(top<10)top=10;
+  // Horizontal: align right edge of menu to right edge of FAB; clamp to viewport.
+  let left=r.right-menuW;
+  if(left<10)left=10;
+  if(left+menuW>vw-10)left=vw-menuW-10;
+  m.style.top=top+'px';
+  m.style.left=left+'px';
+  m.style.right='auto';
+  m.style.bottom='auto';
+}
+
 function toggleClaudeMenu(e){
   if(e)e.stopPropagation();
+  // Suppress the toggle if the most recent mouse interaction was a drag
+  if(_fabDrag.moved){_fabDrag.moved=false;return;}
   const m=document.getElementById('claude-menu');
-  if(m)m.classList.toggle('open');
+  if(!m)return;
+  if(m.classList.contains('open')){m.classList.remove('open');}
+  else{_positionClaudeMenu();m.classList.add('open');}
 }
 // Close menu on any outside click
 document.addEventListener('click',function(e){
@@ -3038,6 +3070,85 @@ document.addEventListener('click',function(e){
   const m=document.getElementById('claude-menu');
   if(m)m.classList.remove('open');
 });
+
+// ── FAB drag-and-drop ──
+function _initClaudeFabDrag(){
+  const fab=document.getElementById('claude-fab');
+  if(!fab)return;
+  // Restore saved position
+  try{
+    const saved=JSON.parse(localStorage.getItem(_FAB_POS_KEY)||'null');
+    if(saved&&typeof saved.left==='number'&&typeof saved.top==='number'){
+      _applyFabPos(saved.left,saved.top);
+    }
+  }catch(e){}
+  const onPointerDown=(ev)=>{
+    const isTouch=ev.type==='touchstart';
+    const point=isTouch?ev.touches[0]:ev;
+    _fabDrag.dragging=true;
+    _fabDrag.moved=false;
+    _fabDrag.startX=point.clientX;
+    _fabDrag.startY=point.clientY;
+    const r=fab.getBoundingClientRect();
+    _fabDrag.origLeft=r.left;
+    _fabDrag.origTop=r.top;
+    if(!isTouch)ev.preventDefault();
+  };
+  const onPointerMove=(ev)=>{
+    if(!_fabDrag.dragging)return;
+    const isTouch=ev.type==='touchmove';
+    const point=isTouch?ev.touches[0]:ev;
+    const dx=point.clientX-_fabDrag.startX;
+    const dy=point.clientY-_fabDrag.startY;
+    if(!_fabDrag.moved && (Math.abs(dx)>4||Math.abs(dy)>4)) _fabDrag.moved=true;
+    if(_fabDrag.moved){
+      _applyFabPos(_fabDrag.origLeft+dx, _fabDrag.origTop+dy);
+      // Close the menu while dragging — its old position is now wrong
+      const m=document.getElementById('claude-menu');
+      if(m)m.classList.remove('open');
+      if(isTouch)ev.preventDefault();
+    }
+  };
+  const onPointerUp=()=>{
+    if(!_fabDrag.dragging)return;
+    _fabDrag.dragging=false;
+    if(_fabDrag.moved){
+      const r=fab.getBoundingClientRect();
+      try{localStorage.setItem(_FAB_POS_KEY,JSON.stringify({left:r.left,top:r.top}));}catch(e){}
+      // Reset moved flag after the click event has had a chance to fire and check it
+      setTimeout(()=>{_fabDrag.moved=false;},250);
+    }
+  };
+  fab.addEventListener('mousedown',onPointerDown);
+  document.addEventListener('mousemove',onPointerMove);
+  document.addEventListener('mouseup',onPointerUp);
+  fab.addEventListener('touchstart',onPointerDown,{passive:true});
+  document.addEventListener('touchmove',onPointerMove,{passive:false});
+  document.addEventListener('touchend',onPointerUp);
+}
+function _applyFabPos(left,top){
+  const fab=document.getElementById('claude-fab');
+  if(!fab)return;
+  // Clamp to viewport so the FAB never scrolls off-screen
+  const w=fab.offsetWidth||48, h=fab.offsetHeight||48;
+  const cl=Math.max(4,Math.min(left,window.innerWidth-w-4));
+  const ct=Math.max(4,Math.min(top,window.innerHeight-h-4));
+  fab.style.left=cl+'px';
+  fab.style.top=ct+'px';
+  fab.style.right='auto';
+  fab.style.bottom='auto';
+}
+// Re-clamp on window resize so a drag-to-edge stays visible
+window.addEventListener('resize',()=>{
+  const fab=document.getElementById('claude-fab');
+  if(!fab)return;
+  const r=fab.getBoundingClientRect();
+  if(r.left===0&&r.top===0)return; // not yet positioned via drag
+  _applyFabPos(r.left,r.top);
+});
+// Wait until DOM is ready (the rest of the boot waits for dbLoad too)
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_initClaudeFabDrag);
+else _initClaudeFabDrag();
 
 // Helper: format a number as currency, blank if null
 function _ccy(v){return v==null||v===''||isNaN(v)?'—':'$'+Number(v).toFixed(2);}
