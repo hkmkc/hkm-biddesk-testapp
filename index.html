@@ -101,16 +101,14 @@ body.sb-collapsed #sb-collapse-btn svg{transform:rotate(180deg)}
 .sb-add:hover{color:rgba(255,255,255,.65);background:rgba(255,255,255,.06)}
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#fff}
 #main-content{flex:1;padding:22px;overflow-y:auto;overflow-x:hidden}
-/* Claude.ai helper — floating button + slide-out menu */
-#claude-fab{position:fixed;right:20px;bottom:60px;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 100%);color:#fff;display:flex;align-items:center;justify-content:center;cursor:grab;box-shadow:0 4px 16px rgba(27,92,158,.4);z-index:500;transition:width .18s ease,height .18s ease,border-radius .18s ease,box-shadow .15s;border:2px solid var(--gold);user-select:none;-webkit-user-select:none;touch-action:none}
-#claude-fab:active{cursor:grabbing}
-#claude-fab:hover{box-shadow:0 6px 22px rgba(27,92,158,.55)}
-/* Collapsed (snap-to-edge) state: thin vertical handle stuck to viewport edge.
-   Border on the visible-edge sides only; flat against the screen edge. */
-#claude-fab.collapsed{width:16px;height:72px;border-radius:0;background:var(--navy);box-shadow:-2px 0 8px rgba(0,0,0,.18)}
-#claude-fab.collapsed.right-edge{border-radius:8px 0 0 8px;border-right-width:0;box-shadow:-3px 0 10px rgba(0,0,0,.2)}
-#claude-fab.collapsed.left-edge{border-radius:0 8px 8px 0;border-left-width:0;box-shadow:3px 0 10px rgba(0,0,0,.2)}
-#claude-fab.collapsed svg{width:11px;height:11px}
+/* Claude.ai helper — docked tab + slide-out menu (no longer draggable).
+   The tab is always glued to the configured edge of the viewport, vertically
+   centered. Click opens the menu; click again (or outside) closes it. */
+#claude-fab{position:fixed;top:50%;transform:translateY(-50%);width:18px;height:80px;background:linear-gradient(135deg,var(--navy) 0%,var(--navy3) 100%);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:500;transition:background .15s,box-shadow .15s,width .15s;border:2px solid var(--gold);user-select:none;-webkit-user-select:none}
+#claude-fab.right-edge{right:0;left:auto;border-right-width:0;border-radius:8px 0 0 8px;box-shadow:-3px 0 10px rgba(0,0,0,.2)}
+#claude-fab.left-edge{left:0;right:auto;border-left-width:0;border-radius:0 8px 8px 0;box-shadow:3px 0 10px rgba(0,0,0,.2)}
+#claude-fab:hover{width:22px;background:var(--navy3)}
+#claude-fab svg{width:12px;height:12px}
 #claude-menu{display:none;position:fixed;right:20px;bottom:120px;width:340px;max-width:calc(100vw - 40px);background:#fff;border:1px solid var(--bd);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.18);z-index:501;overflow:hidden;font-family:inherit}
 #claude-menu.open{display:block}
 .claude-menu-hdr{padding:12px 16px 4px;font-size:14px;font-weight:800;color:var(--navy);background:var(--bg2);border-bottom:1px solid transparent}
@@ -3036,10 +3034,7 @@ function saveDraft(){
 // and opens Claude.ai in a new tab. User pastes & sends in their
 // existing Claude.ai chat (uses their existing subscription).
 // ══════════════════════════════════════════════════════════════
-// Drag state — distinguishes a click from a drag and lets us suppress the
-// menu-toggle if the user actually intended to move the FAB.
-let _fabDrag={dragging:false,startX:0,startY:0,origLeft:0,origTop:0,moved:false};
-const _FAB_POS_KEY='claude-fab-pos';
+const _FAB_EDGE_KEY='claude-fab-edge';      // 'right' | 'left'
 const _CLAUDE_PROJECT_KEY='claude-project-url';
 const _CLAUDE_PROJECT_DEFAULT='https://claude.ai/project/019ddefc-1e63-750c-8f6f-5ef65d09cc1d';
 
@@ -3098,8 +3093,6 @@ function _positionClaudeMenu(){
 
 function toggleClaudeMenu(e){
   if(e)e.stopPropagation();
-  // Suppress the toggle if the most recent mouse interaction was a drag
-  if(_fabDrag.moved){_fabDrag.moved=false;return;}
   const m=document.getElementById('claude-menu');
   if(!m)return;
   if(m.classList.contains('open')){m.classList.remove('open');}
@@ -3112,149 +3105,40 @@ document.addEventListener('click',function(e){
   if(m)m.classList.remove('open');
 });
 
-// ── FAB drag-and-drop, with snap-to-edge collapse ──
-const _SNAP_PX=50;        // distance from viewport edge that triggers a snap
-const _COLLAPSED_W=16;    // width of the collapsed handle (matches CSS)
-
-function _initClaudeFabDrag(){
-  const fab=document.getElementById('claude-fab');
-  if(!fab)return;
-  // Restore saved state
-  try{
-    const saved=JSON.parse(localStorage.getItem(_FAB_POS_KEY)||'null');
-    if(saved){
-      if(saved.collapsed&&saved.edge){
-        _snapToEdge(saved.edge, typeof saved.top==='number'?saved.top:60);
-      } else if(typeof saved.left==='number'&&typeof saved.top==='number'){
-        _applyFabPos(saved.left,saved.top);
-      }
-    }
-  }catch(e){}
-  const onPointerDown=(ev)=>{
-    const isTouch=ev.type==='touchstart';
-    const point=isTouch?ev.touches[0]:ev;
-    _fabDrag.dragging=true;
-    _fabDrag.moved=false;
-    _fabDrag.startX=point.clientX;
-    _fabDrag.startY=point.clientY;
-    const r=fab.getBoundingClientRect();
-    _fabDrag.origLeft=r.left;
-    _fabDrag.origTop=r.top;
-    if(!isTouch)ev.preventDefault();
-  };
-  const onPointerMove=(ev)=>{
-    if(!_fabDrag.dragging)return;
-    const isTouch=ev.type==='touchmove';
-    const point=isTouch?ev.touches[0]:ev;
-    const dx=point.clientX-_fabDrag.startX;
-    const dy=point.clientY-_fabDrag.startY;
-    if(!_fabDrag.moved && (Math.abs(dx)>4||Math.abs(dy)>4)){
-      _fabDrag.moved=true;
-      // If we started a drag from the collapsed state, expand back to round
-      // and re-anchor at the cursor so the rest of the drag math works.
-      if(fab.classList.contains('collapsed')){
-        _expandFab();
-        const newLeft=point.clientX-24, newTop=point.clientY-24;
-        _applyFabPos(newLeft,newTop);
-        _fabDrag.startX=point.clientX;
-        _fabDrag.startY=point.clientY;
-        _fabDrag.origLeft=newLeft;
-        _fabDrag.origTop=newTop;
-      }
-    }
-    if(_fabDrag.moved){
-      _applyFabPos(_fabDrag.origLeft+dx, _fabDrag.origTop+dy);
-      const m=document.getElementById('claude-menu');
-      if(m)m.classList.remove('open');
-      if(isTouch)ev.preventDefault();
-    }
-  };
-  const onPointerUp=()=>{
-    if(!_fabDrag.dragging)return;
-    _fabDrag.dragging=false;
-    if(_fabDrag.moved){
-      // Snap-to-edge if released near a side edge
-      const r=fab.getBoundingClientRect();
-      const centerY=r.top+r.height/2;
-      if(r.right>=window.innerWidth-_SNAP_PX){
-        _snapToEdge('right',centerY-36);
-      } else if(r.left<=_SNAP_PX){
-        _snapToEdge('left',centerY-36);
-      }
-      _saveFabState();
-      setTimeout(()=>{_fabDrag.moved=false;},250);
-    }
-  };
-  fab.addEventListener('mousedown',onPointerDown);
-  document.addEventListener('mousemove',onPointerMove);
-  document.addEventListener('mouseup',onPointerUp);
-  fab.addEventListener('touchstart',onPointerDown,{passive:true});
-  document.addEventListener('touchmove',onPointerMove,{passive:false});
-  document.addEventListener('touchend',onPointerUp);
+// ── FAB edge configuration (no drag — just docked left or right) ──
+function _getClaudeFabEdge(){
+  try{const e=localStorage.getItem(_FAB_EDGE_KEY);return e==='left'?'left':'right';}
+  catch(e){return 'right';}
 }
-function _applyFabPos(left,top){
-  const fab=document.getElementById('claude-fab');
-  if(!fab)return;
-  const w=fab.offsetWidth||48, h=fab.offsetHeight||48;
-  const cl=Math.max(4,Math.min(left,window.innerWidth-w-4));
-  const ct=Math.max(4,Math.min(top,window.innerHeight-h-4));
-  fab.style.left=cl+'px';
-  fab.style.top=ct+'px';
-  fab.style.right='auto';
-  fab.style.bottom='auto';
-}
-function _snapToEdge(edge,top){
+function _applyClaudeFabEdge(edge){
   const fab=document.getElementById('claude-fab');
   if(!fab)return;
   fab.classList.remove('left-edge','right-edge');
-  fab.classList.add('collapsed',edge+'-edge');
-  // Force layout to pick up the new (collapsed) dimensions
-  void fab.offsetWidth;
-  const h=fab.offsetHeight||72;
-  const cTop=Math.max(8,Math.min(window.innerHeight-h-8,top));
-  fab.style.top=cTop+'px';
-  fab.style.bottom='auto';
-  if(edge==='right'){
-    fab.style.left=(window.innerWidth-_COLLAPSED_W)+'px';
-    fab.style.right='auto';
-  } else {
-    fab.style.left='0px';
-    fab.style.right='auto';
+  fab.classList.add(edge+'-edge');
+}
+// User-facing toggle (called from the menu footer link)
+function _toggleClaudeFabEdge(){
+  const newEdge=_getClaudeFabEdge()==='right'?'left':'right';
+  try{localStorage.setItem(_FAB_EDGE_KEY,newEdge);}catch(e){}
+  _applyClaudeFabEdge(newEdge);
+  _updateClaudeFooter();
+  // Keep the menu open and re-position it next to the new edge
+  const m=document.getElementById('claude-menu');
+  if(m&&m.classList.contains('open'))_positionClaudeMenu();
+}
+function _initClaudeFab(){
+  _applyClaudeFabEdge(_getClaudeFabEdge());
+  _updateClaudeFooter();
+}
+function _updateClaudeFooter(){
+  const status=document.getElementById('claude-project-status');
+  if(status){
+    const edge=_getClaudeFabEdge();
+    status.innerHTML=`Project: <b>HKM BidDesk</b> · Tab on <b>${edge}</b>`;
   }
 }
-function _expandFab(){
-  const fab=document.getElementById('claude-fab');
-  if(!fab)return;
-  fab.classList.remove('collapsed','left-edge','right-edge');
-  void fab.offsetWidth; // force re-layout to round button
-}
-function _saveFabState(){
-  const fab=document.getElementById('claude-fab');
-  if(!fab)return;
-  const r=fab.getBoundingClientRect();
-  const collapsed=fab.classList.contains('collapsed');
-  const edge=fab.classList.contains('right-edge')?'right':(fab.classList.contains('left-edge')?'left':null);
-  try{localStorage.setItem(_FAB_POS_KEY,JSON.stringify({
-    left:r.left,top:r.top,collapsed,edge
-  }));}catch(e){}
-}
-// Re-position on window resize (collapsed stays glued to its edge; expanded
-// gets re-clamped so it can't end up off-screen).
-window.addEventListener('resize',()=>{
-  const fab=document.getElementById('claude-fab');
-  if(!fab)return;
-  if(fab.classList.contains('collapsed')){
-    const edge=fab.classList.contains('right-edge')?'right':'left';
-    const r=fab.getBoundingClientRect();
-    _snapToEdge(edge,r.top);
-  } else {
-    const r=fab.getBoundingClientRect();
-    if(r.left===0&&r.top===0)return;
-    _applyFabPos(r.left,r.top);
-  }
-});
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_initClaudeFabDrag);
-else _initClaudeFabDrag();
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',_initClaudeFab);
+else _initClaudeFab();
 
 // Helper: format a number as currency, blank if null
 function _ccy(v){return v==null||v===''||isNaN(v)?'—':'$'+Number(v).toFixed(2);}
@@ -7630,7 +7514,10 @@ window.addEventListener('hashchange',function(){
   </div>
   <div class="claude-menu-foot">
     <span id="claude-project-status">Project: <b>HKM BidDesk</b></span>
-    <a href="#" onclick="event.preventDefault();event.stopPropagation();_setClaudeProjectUrl()">change</a>
+    <span style="display:flex;gap:10px">
+      <a href="#" onclick="event.preventDefault();event.stopPropagation();_toggleClaudeFabEdge()">flip side</a>
+      <a href="#" onclick="event.preventDefault();event.stopPropagation();_setClaudeProjectUrl()">change project</a>
+    </span>
   </div>
 </div>
 
